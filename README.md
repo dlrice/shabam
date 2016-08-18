@@ -20,8 +20,9 @@ shabam.plot('sequence.bam', chrom=2, start=48000000, end=48000080, file='plot.pn
 - [ ] Optimize vertical height
 
 #### Sequence plot
-- [ ] Plot a list of letters using matplotlib patches
+- [ ] Plot a list of letters using [matplotlib patches](http://matplotlib.org/api/patches_api.html)
 - [ ] Scale colors based on qual values
+- [ ] Save plot
 
 #### Historgram plot
 - [ ] Compute proportion of variants at any site
@@ -29,7 +30,7 @@ shabam.plot('sequence.bam', chrom=2, start=48000000, end=48000080, file='plot.pn
 - [ ] At positions with proportion of variants > threshold, reflect proportion with base colors
 
 ## Development setup
-1. Install python 2 [try miniconda](http://conda.pydata.org/miniconda.html)
+1. Install python 2 ([try miniconda](http://conda.pydata.org/miniconda.html) if you haven't got it)
 2. Install [pysam](https://github.com/pysam-developers/pysam/)
 3. Ensure git is installed (try `git --version`)
 4. `git clone https://github.com/dlrice/shabam/`
