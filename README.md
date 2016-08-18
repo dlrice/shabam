@@ -5,7 +5,7 @@ The dream:
 
 ```
 import shabam
-shabam.plot('some_sequence.bam', chrom=2, start=2323234, end=4235235345, file='reads_for_sample_323.png')
+shabam.plot('sequence.bam', chrom=2, start=48000000, end=48000080, file='plot.png')
 ```
 
 ![The dream](/dream.png?raw=true)
