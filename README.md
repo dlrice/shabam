@@ -35,3 +35,7 @@ shabam.plot('sequence.bam', chrom=2, start=48000000, end=48000080, file='plot.pn
 3. Ensure git is installed (try `git --version`)
 4. Ensure you have a github account.
 5. Fork this repository and clone onto your local machine.
+
+## References
+- [genome.sph.umich.edu/wiki/SAM](http://genome.sph.umich.edu/wiki/SAM)
+
