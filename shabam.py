@@ -1,8 +1,12 @@
 #!/usr/bin/env python
+# import fire
 import pysam
 import numpy as np
 import matplotlib.pyplot as plt
-    
+import os.path
+import argparse
+
+
 ENDCHAR = "-"
 GAPCHAR = "."
 DELCHAR = "*"
@@ -35,17 +39,17 @@ BASE2COLORS = {
     'I' : 'mediumpurple' # insertion
 }
 
-def ParseCigar(cigar, bases):
+def parseCigar(cigar, bases):
     """
     Return list of strings, each item corresponding to a single reference position
     """
     rep = []
     currentpos = 0
     wasinsert = False
-    # print(cigar)
     for operation, length in cigar:
-#         print(operation, length)
         if operation in [BAM_CMATCH, BAM_CEQUAL, BAM_CDIFF]: # match (M, X, =)
+            if operation == BAM_CDIFF:
+                print(operation)
             for i in range(length):
                 if wasinsert:
                     rep[-1] = rep[-1] + bases[currentpos]
@@ -78,42 +82,32 @@ def ParseCigar(cigar, bases):
     return rep
 
 
-def GenerateRGB(representations, start, end):
-    RGB = np.ones((len(representations), end-start, 3), dtype=np.uint8)*255
-    for ri, representation in enumerate(representations):
+def generateRGB(representations, plot_start, plot_end, reference):
+    plot_length = plot_end - plot_start
+    nrows = len(representations) + 1
+    RGB = np.ones((nrows, plot_length, 3), dtype=np.uint8)*255
+    
+    # Plot reference
+    for i, base in enumerate(reference):
+            RGB[0, i, :] = BASE2COLORS[base]
+    
+    for row_index, representation in enumerate(representations):
+        row_index += 1 # For reference
         bases = representation['bases']
-        position = representation['position']
-
-        if position < start:
-            range_start = start - position
-        else:
-            range_start = 0
-
-    #     print('position',position)
-    #     print('len(bases)',len(bases))
-    #     print('end',end)
-        if (position + len(bases)) > end:
-            range_end = (end - position)
-        else:
-            range_end = len(bases)
-            
-        assert range_start < range_end
-        for ci in range(range_start, range_end):
-            base = bases[ci]
-            RGB[ri, ci, :] = BASE2COLORS[base]
+        read_start = representation['position']
+        read_end = read_start + len(bases) - 1
+        start = max(plot_start, read_start)
+        end = min(plot_end, read_end)
+        for i in range(start, end):
+            read_index = i - read_start
+            plot_index = i - plot_start
+            base = bases[read_index]
+            RGB[row_index, plot_index, :] = BASE2COLORS[base]
 
     return RGB
 
-def main():
 
-    samfile = pysam.AlignmentFile("test/example.bam", "rb")
-
-    chrom=16
-    start=48000000
-    end=48000080
-
-
-    reads = samfile.fetch("16", start, end)
+def getRepresentations(reads):
     representations = []
     for read in reads:
         position = read.pos
@@ -121,12 +115,90 @@ def main():
         cigar = read.cigartuples
     #     if read.is_reverse:
     #         bases = bases.lower()
-        representations.append({'position': position, 'bases': ParseCigar(cigar, bases)})
+        representations.append({
+            'position': position,
+            'bases': parseCigar(cigar, bases)
+        })
+    return representations
 
-    RGB = GenerateRGB(representations, start, end)
-    fig, (ax1) = plt.subplots(figsize=(20,10))
-    ax1.imshow(RGB)
-    fig.savefig('testing.png')
+
+def plot(seqfile, fastafile, chrom, start, end, out):
+    seq = pysam.AlignmentFile(seqfile, 'rb')
+    fasta = pysam.FastaFile(fastafile)
+    reads = seq.fetch("16", start, end)
+    representations = getRepresentations(reads)
+    ref = fasta.fetch(start=start, end=end, region=str(chrom))
+    RGB = generateRGB(representations, start, end, ref)
+
+    fig, (ax) = plt.subplots(figsize=(RGB.shape[1]/10,RGB.shape[0]/10 + 5))
+    ax.imshow(RGB)
+
+    #Spacing between each line
+    # plt.grid(b=True, which='minor', color='w',linestyle='-')
+
+    xticks = np.arange(0.5,end - start + 1, 1)
+    # ax.set_xticks(xticks)
+    # major_labels = [str(start + d) for d in xticks]
+    ax.set_xticks(xticks, minor=True)
+
+    yticks = np.arange(0.5, len(representations))
+    ax.set_yticks(yticks, minor=True)
+  
+    xticks=np.array(ax.get_xticks().tolist(), dtype=int) + start
+    ax.set_xticklabels(xticks, rotation=90, ha='left')
+    plt.axhline(y=0.45, linewidth=1, color = 'k')
+    plt.tick_params(top='off', bottom='off', left='off', right='off', labelleft='off', labelbottom='off', labeltop='on')
+    
+    ax.spines['bottom'].set_visible(False)
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+    ax.spines['left'].set_visible(False)
+    
+    plt.tight_layout()
+    _, ext = os.path.splitext(out)
+    if not ext:
+        ext = '.png'
+    ext = ext[1:] # Cut off the period.
+    fig.savefig(out, format=ext, dpi=200)
+
+    return ax
+
+
+# class Shabam(object):
+#     """A python/command tool to create sequence plots from bam/cram files."""
+#     def plot(self, seqfile, fastafile, chrom, start, end, out):
+#         plot(seqfile, fastafile, chrom, start, end, out)
+
+
+def main():
+    parser = argparse.ArgumentParser(description='A python/command tool to create sequence plots from bam/cram files.')
+    parser.add_argument('--seqfile', type=str, required=True,
+        help='BAM or CRAM to plot')
+    parser.add_argument('--fastafile', type=str, required=True,
+        help='A reference FASTA file')
+    parser.add_argument('--chrom', type=str, required=True,
+        help='Chromosome')
+    parser.add_argument('--start', type=int, required=True,
+        help='Start base of plot')
+    parser.add_argument('--end', type=int, required=True,
+        help='End base of plot')
+    parser.add_argument('--out', type=str, required=True,
+        help='Output file (extension determines type: png, pdf, jpg, etc.)')
+
+    args = parser.parse_args()
+    seqfile = args.seqfile
+    fastafile = args.fastafile
+    chrom = args.chrom
+    start = args.start
+    end = args.end
+    out = args.out
+
+    plot(seqfile, fastafile, chrom, start, end, out)
+
+
+
 
 if __name__ == '__main__':
     main()
+
+    # fire.Fire(Shabam)
