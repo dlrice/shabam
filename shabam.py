@@ -31,11 +31,12 @@ BAM_CDIFF = 8 # X
 # }
 
 BASE2COLORS = {
-    'A': np.array([0,110,0], dtype=np.uint8), 
-    'C': np.array([0,0,255], dtype=np.uint8),
-    'G': np.array([255,150,50], dtype=np.uint8),
-    'T': np.array([255,0,0], dtype=np.uint8),
-    '-' : 'pink',       # deletion
+    'A' : np.array([0,110,0], dtype=np.uint8), 
+    'C' : np.array([0,0,255], dtype=np.uint8),
+    'G' : np.array([255,150,50], dtype=np.uint8),
+    'T' : np.array([255,0,0], dtype=np.uint8),
+    'M' : np.array([232,232,232], dtype=np.uint8), # match
+    '-' : 'pink',        # deletion
     'I' : 'mediumpurple' # insertion
 }
 
@@ -102,6 +103,8 @@ def generateRGB(representations, plot_start, plot_end, reference):
             read_index = i - read_start
             plot_index = i - plot_start
             base = bases[read_index]
+            if reference[plot_index] == base:
+                base = 'M'
             RGB[row_index, plot_index, :] = BASE2COLORS[base]
 
     return RGB
@@ -146,7 +149,7 @@ def plot(seqfile, fastafile, chrom, start, end, out):
   
     xticks=np.array(ax.get_xticks().tolist(), dtype=int) + start
     ax.set_xticklabels(xticks, rotation=90, ha='left')
-    plt.axhline(y=0.45, linewidth=1, color = 'k')
+    # plt.axhline(y=0.45, linewidth=1, color = 'k')
     plt.tick_params(top='off', bottom='off', left='off', right='off', labelleft='off', labelbottom='off', labeltop='on')
     
     ax.spines['bottom'].set_visible(False)
