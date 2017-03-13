@@ -10,6 +10,10 @@ shabam.plot('sequence.bam', chrom=2, start=48000000, end=48000080, file='plot.pn
 
 ![The dream](/dream.png?raw=true)
 
+Reality:
+
+![Reality](/reality.png?raw=true)
+
 ## The steps
 
 #### Create text based view (similar to samtools tview)
