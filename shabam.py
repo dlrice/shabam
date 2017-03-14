@@ -128,7 +128,7 @@ def getRepresentations(reads):
 def plot(seqfile, fastafile, chrom, start, end, out):
     seq = pysam.AlignmentFile(seqfile, 'rb')
     fasta = pysam.FastaFile(fastafile)
-    reads = seq.fetch("16", start, end)
+    reads = seq.fetch(str(chrom), start, end)
     representations = getRepresentations(reads)
     ref = fasta.fetch(start=start, end=end, region=str(chrom))
     RGB = generateRGB(representations, start, end, ref)
