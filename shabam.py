@@ -36,6 +36,8 @@ BASE2COLORS = {
     'G' : np.array([255,150,50], dtype=np.uint8),
     'T' : np.array([255,0,0], dtype=np.uint8),
     'M' : np.array([232,232,232], dtype=np.uint8), # match
+    'M_f' : np.array([80,180,255], dtype=np.uint8), # match, forward color
+    'M_r' : np.array([255,180,80], dtype=np.uint8), # match, reverse color
     '-' : 'pink',        # deletion
     'I' : 'mediumpurple' # insertion
 }
@@ -83,7 +85,7 @@ def parseCigar(cigar, bases):
     return rep
 
 
-def generateRGB(representations, plot_start, plot_end, reference):
+def generateRGB(representations, plot_start, plot_end, reference, by_strand=False):
     plot_length = plot_end - plot_start
     nrows = len(representations) + 1
     RGB = np.ones((nrows, plot_length, 3), dtype=np.uint8)*255
@@ -105,6 +107,10 @@ def generateRGB(representations, plot_start, plot_end, reference):
             base = bases[read_index]
             if reference[plot_index] == base:
                 base = 'M'
+                if by_strand:
+                    strand = {True: 'r', False: 'f'}[representation['is_reverse']]
+                    base = 'M_{}'.format(strand)
+            
             RGB[row_index, plot_index, :] = BASE2COLORS[base]
 
     return RGB
@@ -120,19 +126,21 @@ def getRepresentations(reads):
     #         bases = bases.lower()
         representations.append({
             'position': position,
-            'bases': parseCigar(cigar, bases)
+            'bases': parseCigar(cigar, bases),
+            'is_reverse': read.is_reverse
         })
     return representations
 
 
-def plot(seqfile, fastafile, chrom, start, end, out=None):
+
+def plot(seqfile, fastafile, chrom, start, end, out=None, by_strand=False):
     chrom = str(chrom)
     seq = pysam.AlignmentFile(seqfile, 'rb')
     reads = seq.fetch(chrom, start, end)
     representations = getRepresentations(reads)
     fasta = pysam.FastaFile(fastafile)
     ref = fasta.fetch(start=start, end=end, region=chrom)
-    RGB = generateRGB(representations, start, end, ref)
+    RGB = generateRGB(representations, start, end, ref, by_strand)
 
     fig, (ax) = plt.subplots(figsize=(RGB.shape[1]/10,RGB.shape[0]/10 + 5))
     ax.imshow(RGB)
@@ -188,6 +196,8 @@ def main():
         help='Start base of plot')
     parser.add_argument('--end', type=int, required=True,
         help='End base of plot')
+    parser.add_argument('--by-strand', default=False, action='store_true',
+        help='whether to color reads by strand (default is not)')
     parser.add_argument('--out', type=str, required=True,
         help='Output file (extension determines type: png, pdf, jpg, etc.)')
 
