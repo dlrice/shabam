@@ -132,12 +132,14 @@ def getRepresentations(reads):
     return representations
 
 
-def plot(seqfile, fastafile, chrom, start, end, out, by_strand=False):
+
+def plot(seqfile, fastafile, chrom, start, end, out=None, by_strand=False):
+    chrom = str(chrom)
     seq = pysam.AlignmentFile(seqfile, 'rb')
-    fasta = pysam.FastaFile(fastafile)
-    reads = seq.fetch("16", start, end)
+    reads = seq.fetch(chrom, start, end)
     representations = getRepresentations(reads)
-    ref = fasta.fetch(start=start, end=end, region=str(chrom))
+    fasta = pysam.FastaFile(fastafile)
+    ref = fasta.fetch(start=start, end=end, region=chrom)
     RGB = generateRGB(representations, start, end, ref, by_strand)
 
     fig, (ax) = plt.subplots(figsize=(RGB.shape[1]/10,RGB.shape[0]/10 + 5))
@@ -165,11 +167,13 @@ def plot(seqfile, fastafile, chrom, start, end, out, by_strand=False):
     ax.spines['left'].set_visible(False)
     
     plt.tight_layout()
-    _, ext = os.path.splitext(out)
-    if not ext:
-        ext = '.png'
-    ext = ext[1:] # Cut off the period.
-    fig.savefig(out, format=ext, dpi=200)
+
+    if out:
+        _, ext = os.path.splitext(out)
+        if not ext:
+            ext = '.png'
+        ext = ext[1:] # Cut off the period.
+        fig.savefig(out, format=ext, dpi=200)
 
     return ax
 

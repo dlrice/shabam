@@ -21,14 +21,16 @@ The reality:
 - [x] Read a reference file
 - [x] Line up reads from a bam with a reference
 - [x] Print reads in terminal
-- [ ] Optimize vertical height
 
 
 #### Sequence plot
-- ~~[ ] Plot a list of letters using [matplotlib patches](http://matplotlib.org/api/patches_api.html)~~
-- [ ] Plot bases as a single matrix RGB triples
-- [x] Save plot
+- [x] Plot bases as a single matrix RGB triples
+- [x] Save plot as png
+- [ ] Deal with insertions/deletions
+- [ ] Gridline every 10 bases
+- [ ] Optimize vertical space
 - [ ] Scale colors based on qual values
+- [ ] Reflect positive/negative strand
 
 
 #### Historgram plot
@@ -39,7 +41,7 @@ The reality:
 
 ## Development setup
 1. Install python 2 ([try miniconda](http://conda.pydata.org/miniconda.html) if you haven't got it)
-2. Install [pysam](https://github.com/pysam-developers/pysam/)
+2. Install sampy, matplotlib, numpy
 3. Ensure git is installed (try `git --version`)
 4. Ensure you have a github account.
 5. Fork this repository and clone onto your local machine.
@@ -47,7 +49,3 @@ The reality:
 
 ## Credit
 Cigar parsing code greatly inspired by the excellent [pybamview](https://github.com/mgymrek/pybamview)
-
-
-## References
-- [genome.sph.umich.edu/wiki/SAM](http://genome.sph.umich.edu/wiki/SAM)
