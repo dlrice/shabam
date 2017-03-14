@@ -31,11 +31,11 @@ BAM_CDIFF = 8 # X
 # }
 
 BASE2COLORS = {
-    'A' : np.array([0,110,0], dtype=np.uint8), 
-    'C' : np.array([0,0,255], dtype=np.uint8),
-    'G' : np.array([255,150,50], dtype=np.uint8),
-    'T' : np.array([255,0,0], dtype=np.uint8),
-    'M' : np.array([232,232,232], dtype=np.uint8), # match
+    'A' : np.array([0,110,0,255], dtype=np.uint8),
+    'C' : np.array([0,0,255,255], dtype=np.uint8),
+    'G' : np.array([255,150,50,255], dtype=np.uint8),
+    'T' : np.array([255,0,0,255], dtype=np.uint8),
+    'M' : np.array([232,232,232,255], dtype=np.uint8), # match
     '-' : 'pink',        # deletion
     'I' : 'mediumpurple' # insertion
 }
@@ -86,7 +86,7 @@ def parseCigar(cigar, bases):
 def generateRGB(representations, plot_start, plot_end, reference):
     plot_length = plot_end - plot_start
     nrows = len(representations) + 1
-    RGB = np.ones((nrows, plot_length, 3), dtype=np.uint8)*255
+    RGB = np.ones((nrows, plot_length, 4), dtype=np.uint8)*255
     
     # Plot reference
     for i, base in enumerate(reference):
@@ -95,6 +95,7 @@ def generateRGB(representations, plot_start, plot_end, reference):
     for row_index, representation in enumerate(representations):
         row_index += 1 # For reference
         bases = representation['bases']
+        quals = representation['qualities']
         read_start = representation['position']
         read_end = read_start + len(bases) - 1
         start = max(plot_start, read_start)
@@ -103,24 +104,31 @@ def generateRGB(representations, plot_start, plot_end, reference):
             read_index = i - read_start
             plot_index = i - plot_start
             base = bases[read_index]
+            qual = quals[read_index]
             if reference[plot_index] == base:
                 base = 'M'
-            RGB[row_index, plot_index, :] = BASE2COLORS[base]
+            color = BASE2COLORS[base]
+            color[3] = to_alpha(qual)
+            RGB[row_index, plot_index, :] = color
 
     return RGB
 
+def to_alpha(qual):
+    return np.floor(255 * (1 - (10**(-qual/10))))
 
 def getRepresentations(reads):
     representations = []
     for read in reads:
         position = read.pos
         bases = read.query
+        quals = read.query_qualities
         cigar = read.cigartuples
     #     if read.is_reverse:
     #         bases = bases.lower()
         representations.append({
             'position': position,
-            'bases': parseCigar(cigar, bases)
+            'bases': parseCigar(cigar, bases),
+            'qualities': quals,
         })
     return representations
 
