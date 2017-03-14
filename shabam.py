@@ -207,11 +207,10 @@ def main():
     chrom = args.chrom
     start = args.start
     end = args.end
+    by_strand = args.by_strand
     out = args.out
 
-    plot(seqfile, fastafile, chrom, start, end, out)
-
-
+    plot(seqfile, fastafile, chrom, start, end, out, by_strand)
 
 
 if __name__ == '__main__':
