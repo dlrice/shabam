@@ -26,6 +26,8 @@ The reality:
 #### Sequence plot
 - [x] Plot bases as a single matrix RGB triples
 - [x] Save plot as png
+- [ ] Deal with insertions/deletions
+- [ ] Gridline every 10 bases
 - [ ] Optimize vertical space
 - [ ] Scale colors based on qual values
 - [ ] Reflect positive/negative strand
