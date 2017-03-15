@@ -48,4 +48,4 @@ The reality:
 
 
 ## Credit
-Cigar parsing code greatly inspired by the excellent [pybamview](https://github.com/mgymrek/pybamview)
+Initial cigar parsing code lifted - with permission - from [pybamview](https://github.com/mgymrek/pybamview)

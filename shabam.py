@@ -45,6 +45,8 @@ BASE2COLORS = {
 def parseCigar(cigar, bases):
     """
     Return list of strings, each item corresponding to a single reference position
+
+    Initial code lifted - with permission - from https://github.com/mgymrek/pybamview
     """
     rep = []
     currentpos = 0
@@ -124,6 +126,8 @@ def getRepresentations(reads):
         cigar = read.cigartuples
     #     if read.is_reverse:
     #         bases = bases.lower()
+        if not cigar:
+            continue
         representations.append({
             'position': position,
             'bases': parseCigar(cigar, bases),
