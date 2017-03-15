@@ -87,14 +87,16 @@ def parseCigar(cigar, bases):
     return rep
 
 
-def generateRGB(representations, plot_start, plot_end, reference, by_strand=False):
+def generateRGB(representations, plot_start, plot_end, reference, by_strand=False,
+        use_ref=True):
     plot_length = plot_end - plot_start
     nrows = len(representations) + 1
     RGB = np.ones((nrows, plot_length, 3), dtype=np.uint8)*255
     
     # Plot reference
-    for i, base in enumerate(reference):
-            RGB[0, i, :] = BASE2COLORS[base]
+    if use_ref:
+        for i, base in enumerate(reference):
+                RGB[0, i, :] = BASE2COLORS[base]
     
     for row_index, representation in enumerate(representations):
         row_index += 1 # For reference
@@ -135,16 +137,50 @@ def getRepresentations(reads):
         })
     return representations
 
+def combine_bams(data):
+    ''' combine data for one or more bams into a single array
+    
+    Args:
+        data: list of numpy.ndarrays for bams
+    
+    Returns:
+        numpy.ndarray, where the image data for the bams have been combined. We
+        add gaps between successive bams by including white space, and a line.
+    '''
+    
+    # define gap between BAMs as white space with a black line in the middle
+    height, width = 2, data[0].shape[1]
+    white = np.ones((height, width, 4), dtype=np.uint8) * 255
+    line = np.ndarray((1, width, 4), np.uint8, np.array([[[0, 0, 0, 255]] * width]))
+    spacer = np.concatenate((white, line, white))
+    
+    # insert spacer gaps between between successive bams
+    data = [ item for x in zip(data, [spacer] * len(data)) for item in x ]
+    data.pop()
+    
+    return np.concatenate(tuple(data))
 
-
-def plot(seqfile, fastafile, chrom, start, end, out=None, by_strand=False):
+def plot(seqfiles, fastafile, chrom, start, end, out=None, by_strand=False):
+    
+    if type(seqfiles) is not list:
+        seqfiles = [seqfiles]
+    
     chrom = str(chrom)
-    seq = pysam.AlignmentFile(seqfile, 'rb')
-    reads = seq.fetch(chrom, start, end)
-    representations = getRepresentations(reads)
     fasta = pysam.FastaFile(fastafile)
     ref = fasta.fetch(start=start, end=end, region=chrom)
-    RGB = generateRGB(representations, start, end, ref, by_strand)
+    
+    use_ref = True
+    RGBs = []
+    for seqfile in seqfiles:
+        seq = pysam.AlignmentFile(seqfile, 'rb')
+        reads = seq.fetch(chrom, start, end)
+        representations = getRepresentations(reads)
+        RGB = generateRGB(representations, start, end, ref, by_strand, use_ref)
+        
+        use_ref = False
+        RGBs.append(data)
+    
+    RGB = combine_bams(RGBs)
 
     fig, (ax) = plt.subplots(figsize=(RGB.shape[1]/10,RGB.shape[0]/10 + 5))
     ax.imshow(RGB)
