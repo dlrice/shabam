@@ -30,8 +30,8 @@ The reality:
 - [ ] Gridline every 10 bases
 - [ ] Optimize vertical space
 - [ ] Scale colors based on qual values
-- [ ] Reflect positive/negative strand
-
+- [x] Reflect positive/negative strand (Thanks @jeremymcrae)
+- [ ] Allow custom colors from JSON file
 
 #### Historgram plot
 - [ ] Compute proportion of variants at any site
