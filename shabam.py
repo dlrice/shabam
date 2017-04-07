@@ -36,7 +36,6 @@ BASE2COLORS = {
     'G' : np.array([255,150,50,255], dtype=np.uint8),
     'T' : np.array([255,0,0,255], dtype=np.uint8),
     'M' : np.array([232,232,232,255], dtype=np.uint8), # match
-    'M' : np.array([232,232,232,255], dtype=np.uint8), # match
     'M_f' : np.array([80,180,255,255], dtype=np.uint8), # match, forward color
     'M_r' : np.array([255,180,80,255], dtype=np.uint8), # match, reverse color
     '-' : 'pink',        # deletion
@@ -93,7 +92,7 @@ def generateRGB(representations, plot_start, plot_end, reference, by_strand=Fals
     plot_length = plot_end - plot_start
     nrows = len(representations) + 1
     RGB = np.ones((nrows, plot_length, 4), dtype=np.uint8)*255
-
+    
     # Plot reference
     if use_ref:
         for i, base in enumerate(reference):
