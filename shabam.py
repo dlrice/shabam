@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 # import fire
+from copy import deepcopy
 import pysam
 import numpy as np
 
@@ -86,7 +87,7 @@ def generateRGB(representations, plot_start, plot_end, reference, by_strand=Fals
     # Plot reference
     if use_ref:
         for i, base in enumerate(reference):
-                RGB[0, i, :] = BASE2COLORS[base]
+            RGB[0, i, :] = deepcopy(BASE2COLORS[base])
     
     for row_index, representation in enumerate(representations):
         row_index += 1 # For reference
@@ -114,7 +115,7 @@ def generateRGB(representations, plot_start, plot_end, reference, by_strand=Fals
             if len(base) > 1:
                 base = 'I'
             
-            color = BASE2COLORS[base]
+            color = deepcopy(BASE2COLORS[base])
             color[3] = to_alpha(qual)
             RGB[row_index, plot_index, :] = color
     return RGB
