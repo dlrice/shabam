@@ -118,6 +118,7 @@ def generateRGB(representations, plot_start, plot_end, reference, by_strand=Fals
             color = deepcopy(BASE2COLORS[base])
             color[3] = to_alpha(qual)
             RGB[row_index, plot_index, :] = color
+    
     return RGB
 
 def to_alpha(qual):
@@ -130,8 +131,6 @@ def getRepresentations(reads):
         bases = read.query
         quals = read.query_qualities
         cigar = read.cigartuples
-    #     if read.is_reverse:
-    #         bases = bases.lower()
         if not cigar:
             continue
         representations.append({
