@@ -29,9 +29,11 @@ The reality:
 - [ ] Deal with insertions/deletions
 - [ ] Gridline every 10 bases
 - [ ] Optimize vertical space
-- [ ] Scale colors based on qual values
+- [x] Scale colors based on qual values (Thanks @jeremymcrae)
 - [x] Reflect positive/negative strand (Thanks @jeremymcrae)
+- [ ] Plot multiple sequence files at once (Thanks @jeremymcrae)
 - [ ] Allow custom colors from JSON file
+
 
 #### Historgram plot
 - [ ] Compute proportion of variants at any site
@@ -40,7 +42,7 @@ The reality:
 
 
 ## Development setup
-1. Install python 2 ([try miniconda](http://conda.pydata.org/miniconda.html) if you haven't got it)
+1. Install python ([try miniconda](http://conda.pydata.org/miniconda.html) if you haven't got it)
 2. Install sampy, matplotlib, numpy
 3. Ensure git is installed (try `git --version`)
 4. Ensure you have a github account.
@@ -48,4 +50,4 @@ The reality:
 
 
 ## Credit
-Initial cigar parsing code lifted - with permission - from [pybamview](https://github.com/mgymrek/pybamview)
+Initial cigar parsing code lifted with permission from [pybamview](https://github.com/mgymrek/pybamview).
