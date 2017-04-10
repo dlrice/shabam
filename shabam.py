@@ -1,6 +1,6 @@
-#!/usr/bin/env python
-# import fire
+
 from copy import deepcopy
+
 import pysam
 import numpy as np
 
