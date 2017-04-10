@@ -106,14 +106,14 @@ def generateRGB(representations, plot_start, plot_end, reference, by_strand=Fals
             except IndexError:
                 print(read_index, len(quals), quals)
             
+            if len(base) > 1:
+                base = 'I'
+            
             if reference[plot_index] == base:
                 base = 'M'
                 if by_strand:
                     strand = {True: 'r', False: 'f'}[representation['is_reverse']]
                     base = 'M_{}'.format(strand)
-            
-            if len(base) > 1:
-                base = 'I'
             
             color = deepcopy(BASE2COLORS[base])
             color[3] = to_alpha(qual)
