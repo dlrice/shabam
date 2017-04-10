@@ -121,8 +121,8 @@ def generateRGB(representations, plot_start, plot_end, reference, by_strand=Fals
     
     return RGB
 
-def to_alpha(qual):
-    return np.floor(255 * (min(35, qual)/35))
+def to_alpha(qual, threshold=35):
+    return np.floor(255 * (min(threshold, qual)/threshold))
 
 def getRepresentations(reads):
     representations = []
