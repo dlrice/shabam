@@ -22,16 +22,16 @@ BAM_CEQUAL = 7 # =
 BAM_CDIFF = 8 # X
 
 # BASE2COLORS = {
-#     'A': 'green', 
-#     'C': 'blue', 
-#     'G': 'orange', 
+#     'A': 'green',
+#     'C': 'blue',
+#     'G': 'orange',
 #     'T': 'red',
 #     '-' : 'black',       # deletion
 #     'I' : 'mediumpurple' # insertion
 # }
 
 BASE2COLORS = {
-    'A' : np.array([0,110,0], dtype=np.uint8), 
+    'A' : np.array([0,110,0], dtype=np.uint8),
     'C' : np.array([0,0,255], dtype=np.uint8),
     'G' : np.array([255,150,50], dtype=np.uint8),
     'T' : np.array([255,0,0], dtype=np.uint8),
@@ -162,7 +162,7 @@ def plot(seqfile, fastafile, chrom, start, end, out=None, by_strand=False):
   
     # ensure the x labels (positions) are divisible by ten
     min_x, max_x = min(ax.get_xticks(minor=True)), max(ax.get_xticks(minor=True))
-    xticks = [ x + start % 10 for x in ax.get_xticks() if min_x <= x + start % 10 <= max_x ]
+    xticks = [ x - start % 10 for x in ax.get_xticks() if min_x <= x - start % 10 <= max_x ]
     ax.set_xticks(xticks)
     
     xticks=np.array(ax.get_xticks().tolist(), dtype=int) + start
