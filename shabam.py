@@ -164,6 +164,41 @@ def combine_bams(data):
     
     return np.concatenate(tuple(data))
 
+def pyplot_plotting(RGB, start, end, out):
+    ''' hide the messy details of matplotlib plotting
+    '''
+    
+    fig, (ax) = plt.subplots(figsize=(RGB.shape[1]/10,RGB.shape[0]/10 + 5))
+    ax.imshow(RGB)
+    
+    # ensure the x labels (positions) are divisible by ten
+    xticks = np.arange(0.5, end - start + 1, 1)
+    min_x, max_x = min(xticks), max(xticks)
+    xticks = [ x - start % 10 + 0.5 for x in ax.get_xticks() if min_x <= x - start % 10 <= max_x ]
+    ax.set_xticks(xticks)
+    
+    # label the positions
+    xticks = np.array(ax.get_xticks().tolist(), dtype=int) + start
+    ax.set_xticklabels(xticks, rotation=90, ha='left')
+    
+    e = ax.xaxis.set_ticks_position('top')
+    e = ax.get_yaxis().set_visible(False)
+    
+    ax.spines['bottom'].set_visible(False)
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+    ax.spines['left'].set_visible(False)
+    
+    if out:
+        _, ext = os.path.splitext(out)
+        if not ext:
+            ext = '.png'
+        ext = ext[1:] # Cut off the period.
+        fig.savefig(out, format=ext, dpi=200, transparent=True,
+            bbox_inches='tight', pad_inches=0)
+    
+    return ax
+
 def plot(seqfiles, fastafile, chrom, start, end, out=None, by_strand=False):
     
     if abs(end - start) > 600:
@@ -188,49 +223,7 @@ def plot(seqfiles, fastafile, chrom, start, end, out=None, by_strand=False):
         use_ref = False
         RGBs.append(RGB)
     
-    RGB = combine_bams(RGBs)
-
-    fig, (ax) = plt.subplots(figsize=(RGB.shape[1]/10,RGB.shape[0]/10 + 5))
-    ax.imshow(RGB)
-
-    #Spacing between each line
-    # plt.grid(b=True, which='minor', color='w',linestyle='-')
-
-    xticks = np.arange(0.5,end - start + 1, 1)
-    # ax.set_xticks(xticks)
-    # major_labels = [str(start + d) for d in xticks]
-    ax.set_xticks(xticks, minor=True)
-
-    yticks = np.arange(0.5, len(representations))
-    ax.set_yticks(yticks, minor=True)
-  
-    # ensure the x labels (positions) are divisible by ten
-    min_x, max_x = min(ax.get_xticks(minor=True)), max(ax.get_xticks(minor=True))
-    xticks = [ x - start % 10 for x in ax.get_xticks() if min_x <= x - start % 10 <= max_x ]
-    ax.set_xticks(xticks)
-    
-    xticks=np.array(ax.get_xticks().tolist(), dtype=int) + start
-    ax.set_xticklabels(xticks, rotation=90, ha='left')
-    # plt.axhline(y=0.45, linewidth=1, color = 'k')
-    plt.tick_params(top='off', bottom='off', left='off', right='off', labelleft='off', labelbottom='off', labeltop='on')
-    
-    ax.spines['bottom'].set_visible(False)
-    ax.spines['top'].set_visible(False)
-    ax.spines['right'].set_visible(False)
-    ax.spines['left'].set_visible(False)
-    
-    plt.tight_layout()
-
-    if out:
-        _, ext = os.path.splitext(out)
-        if not ext:
-            ext = '.png'
-        ext = ext[1:] # Cut off the period.
-        fig.savefig(out, format=ext, dpi=200, transparent=True,
-            bbox_inches='tight', pad_inches=0)
-
-    return ax
-
+    return pyplot_plotting(combine_bams(RGBs), start, end, out)
 
 # class Shabam(object):
 #     """A python/command tool to create sequence plots from bam/cram files."""
