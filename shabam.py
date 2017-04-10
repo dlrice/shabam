@@ -169,6 +169,9 @@ def combine_bams(data):
 
 def plot(seqfiles, fastafile, chrom, start, end, out=None, by_strand=False):
     
+    if type(seqfiles) is tuple:
+        seqfiles = list(seqfiles)
+
     if type(seqfiles) is not list:
         seqfiles = [seqfiles]
     
@@ -185,7 +188,7 @@ def plot(seqfiles, fastafile, chrom, start, end, out=None, by_strand=False):
         RGB = generateRGB(representations, start, end, ref, by_strand, use_ref)
         
         use_ref = False
-        RGBs.append(data)
+        RGBs.append(RGB)
     
     RGB = combine_bams(RGBs)
 
@@ -233,8 +236,8 @@ def plot(seqfiles, fastafile, chrom, start, end, out=None, by_strand=False):
 
 def main():
     parser = argparse.ArgumentParser(description='A python/command tool to create sequence plots from bam/cram files.')
-    parser.add_argument('--seqfile', type=str, required=True,
-        help='BAM or CRAM to plot')
+    parser.add_argument('--seqfiles', type=str,  nargs='+', required=True,
+        help='BAM(s) or CRAM(s) to plot.')
     parser.add_argument('--fastafile', type=str, required=True,
         help='A reference FASTA file')
     parser.add_argument('--chrom', type=str, required=True,
@@ -249,7 +252,7 @@ def main():
         help='Output file (extension determines type: png, pdf, jpg, etc.)')
 
     args = parser.parse_args()
-    seqfile = args.seqfile
+    seqfiles = args.seqfiles
     fastafile = args.fastafile
     chrom = args.chrom
     start = args.start
@@ -257,7 +260,7 @@ def main():
     by_strand = args.by_strand
     out = args.out
 
-    plot(seqfile, fastafile, chrom, start, end, out, by_strand)
+    plot(seqfiles, fastafile, chrom, start, end, out, by_strand)
 
 
 if __name__ == '__main__':
