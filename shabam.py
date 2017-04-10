@@ -9,7 +9,6 @@ matplotlib.use('agg')
 
 import matplotlib.pyplot as plt
 import os.path
-import argparse
 
 
 BASE2COLORS = {
@@ -224,43 +223,3 @@ def plot(seqfiles, fastafile, chrom, start, end, out=None, by_strand=False):
         RGBs.append(RGB)
     
     return pyplot_plotting(combine_bams(RGBs), start, end, out)
-
-# class Shabam(object):
-#     """A python/command tool to create sequence plots from bam/cram files."""
-#     def plot(self, seqfile, fastafile, chrom, start, end, out):
-#         plot(seqfile, fastafile, chrom, start, end, out)
-
-
-def main():
-    parser = argparse.ArgumentParser(description='A python/command tool to create sequence plots from bam/cram files.')
-    parser.add_argument('--seqfiles', type=str,  nargs='+', required=True,
-        help='BAM(s) or CRAM(s) to plot.')
-    parser.add_argument('--fastafile', type=str, required=True,
-        help='A reference FASTA file')
-    parser.add_argument('--chrom', type=str, required=True,
-        help='Chromosome')
-    parser.add_argument('--start', type=int, required=True,
-        help='Start base of plot')
-    parser.add_argument('--end', type=int, required=True,
-        help='End base of plot')
-    parser.add_argument('--by-strand', default=False, action='store_true',
-        help='whether to color reads by strand (default is not)')
-    parser.add_argument('--out', type=str, required=True,
-        help='Output file (extension determines type: png, pdf, jpg, etc.)')
-
-    args = parser.parse_args()
-    seqfiles = args.seqfiles
-    fastafile = args.fastafile
-    chrom = args.chrom
-    start = args.start
-    end = args.end
-    by_strand = args.by_strand
-    out = args.out
-
-    plot(seqfiles, fastafile, chrom, start, end, out, by_strand)
-
-
-if __name__ == '__main__':
-    main()
-
-    # fire.Fire(Shabam)
