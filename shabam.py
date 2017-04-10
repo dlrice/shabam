@@ -11,29 +11,6 @@ import os.path
 import argparse
 
 
-ENDCHAR = "-"
-GAPCHAR = "."
-DELCHAR = "-"
-
-BAM_CMATCH = 0 # M
-BAM_CINS = 1 # I
-BAM_CDEL = 2 # D
-BAM_CREF_SKIP = 3 # N
-BAM_CSOFT_CLIP = 4 # S
-BAM_CHARD_CLIP = 5 # H
-BAM_CPAD = 6 # P
-BAM_CEQUAL = 7 # =
-BAM_CDIFF = 8 # X
-
-# BASE2COLORS = {
-#     'A': 'green',
-#     'C': 'blue',
-#     'G': 'orange',
-#     'T': 'red',
-#     '-' : 'black',       # deletion
-#     'I' : 'mediumpurple' # insertion
-# }
-
 BASE2COLORS = {
     'A' : np.array([0,110,0,255], dtype=np.uint8),
     'C' : np.array([0,0,255,255], dtype=np.uint8),
@@ -50,15 +27,23 @@ BASE2COLORS = {
 def parseCigar(cigar, bases):
     """
     Return list of strings, each item corresponding to a single reference position
-
+    
     Initial code lifted - with permission - from https://github.com/mgymrek/pybamview
     """
+    
+    ENDCHAR = "-"
+    GAPCHAR = "."
+    DELCHAR = "-"
+    
+    BAM = {'CMATCH': 0, 'CINS': 1, 'CDEL': 2, 'CREF_SKIP': 3, 'CSOFT_CLIP': 4,
+        'CHARD_CLIP': 5, 'CPAD': 6, 'CEQUAL': 7, 'CDIFF': 8,}
+    
     rep = []
     currentpos = 0
     wasinsert = False
     for operation, length in cigar:
-        if operation in [BAM_CMATCH, BAM_CEQUAL, BAM_CDIFF]: # match (M, X, =)
-            if operation == BAM_CDIFF:
+        if operation in [BAM['CMATCH'], BAM['CEQUAL'], BAM['CDIFF']]: # match (M, X, =)
+            if operation == BAM['CDIFF']:
                 print(operation)
             for i in range(length):
                 if wasinsert:
@@ -67,27 +52,27 @@ def parseCigar(cigar, bases):
                     rep.append(bases[currentpos])
                 wasinsert = False
                 currentpos += 1
-        elif operation == BAM_CINS: # put insertion in next base position (I)
+        elif operation == BAM['CINS']: # put insertion in next base position (I)
             if wasinsert:
                 rep[-1] = rep[-1] + bases[currentpos:currentpos + length]
             else:
                 rep.append(bases[currentpos:currentpos + length])
             currentpos = currentpos + length
             wasinsert = True
-        elif operation in [BAM_CDEL, BAM_CREF_SKIP]: # deletion (D) or skipped region from the reference (N)
+        elif operation in [BAM['CDEL'], BAM['CREF_SKIP']]: # deletion (D) or skipped region from the reference (N)
             for i in range(length):
                 if wasinsert:
                     rep[-1] = rep[-1] + DELCHAR
                 else:
                     rep.append(DELCHAR)
                 wasinsert = False
-        elif operation == BAM_CPAD: # padding (silent deletion from padded reference) (P)
+        elif operation == BAM['CPAD']: # padding (silent deletion from padded reference) (P)
             if wasinsert:
                 rep[-1] = rep[-1] + DELCHAR * length
             else:
                 rep.append(DELCHAR * length)
             wasinsert = True
-        elif operation not in [BAM_CSOFT_CLIP, BAM_CHARD_CLIP]: # hard clipping or soft clipping
+        elif operation not in [BAM['CSOFT_CLIP'], BAM['CHARD_CLIP']]: # hard clipping or soft clipping
             sys.stderr.write("ERROR: Invalid CIGAR operation (%s) in read %s \n"%(operation, read.qname))
     return rep
 
