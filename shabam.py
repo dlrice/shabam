@@ -9,7 +9,7 @@ import argparse
 
 ENDCHAR = "-"
 GAPCHAR = "."
-DELCHAR = "*"
+DELCHAR = "-"
 
 BAM_CMATCH = 0 # M
 BAM_CINS = 1 # I
@@ -38,8 +38,9 @@ BASE2COLORS = {
     'M' : np.array([232,232,232,255], dtype=np.uint8), # match
     'M_f' : np.array([80,180,255,255], dtype=np.uint8), # match, forward color
     'M_r' : np.array([255,180,80,255], dtype=np.uint8), # match, reverse color
-    '-' : 'pink',        # deletion
-    'I' : 'mediumpurple' # insertion
+    '-' : np.array([230,100,200,255], dtype=np.uint8),  # deletion, pink
+    'I' : np.array([100,30,200,255], dtype=np.uint8), # insertion, purple
+    'N' : np.array([0,0,0,255], dtype=np.uint8), # insertion, purple
 }
 
 def parseCigar(cigar, bases):
@@ -64,9 +65,9 @@ def parseCigar(cigar, bases):
                 currentpos += 1
         elif operation == BAM_CINS: # put insertion in next base position (I)
             if wasinsert:
-                rep[-1] = rep[-1] + nucs[currentpos:currentpos + length]
+                rep[-1] = rep[-1] + bases[currentpos:currentpos + length]
             else:
-                rep.append(nucs[currentpos:currentpos + length])
+                rep.append(bases[currentpos:currentpos + length])
             currentpos = currentpos + length
             wasinsert = True
         elif operation in [BAM_CDEL, BAM_CREF_SKIP]: # deletion (D) or skipped region from the reference (N)
@@ -110,12 +111,20 @@ def generateRGB(representations, plot_start, plot_end, reference, by_strand=Fals
             read_index = i - read_start
             plot_index = i - plot_start
             base = bases[read_index]
-            qual = quals[read_index]
+            try:
+                qual = quals[read_index]
+            except IndexError:
+                print(read_index, len(quals), quals)
+            
             if reference[plot_index] == base:
                 base = 'M'
                 if by_strand:
                     strand = {True: 'r', False: 'f'}[representation['is_reverse']]
                     base = 'M_{}'.format(strand)
+            
+            if len(base) > 1:
+                base = 'I'
+            
             color = BASE2COLORS[base]
             color[3] = to_alpha(qual)
             RGB[row_index, plot_index, :] = color
@@ -168,9 +177,10 @@ def combine_bams(data):
 
 def plot(seqfiles, fastafile, chrom, start, end, out=None, by_strand=False):
     
-    if type(seqfiles) is tuple:
-        seqfiles = list(seqfiles)
-
+    if abs(end - start) > 600:
+        print('you are trying to show more than 600 bp in the plot, which is too many')
+        return None
+    
     if type(seqfiles) is not list:
         seqfiles = [seqfiles]
     
@@ -184,7 +194,7 @@ def plot(seqfiles, fastafile, chrom, start, end, out=None, by_strand=False):
         seq = pysam.AlignmentFile(seqfile, 'rb')
         reads = seq.fetch(chrom, start, end)
         representations = getRepresentations(reads)
-        RGB = generateRGB(representations, start, end, ref, by_strand, use_ref)
+        data = generateRGB(representations, start, end, ref, by_strand, use_ref)
         
         use_ref = False
         RGBs.append(RGB)
@@ -227,7 +237,8 @@ def plot(seqfiles, fastafile, chrom, start, end, out=None, by_strand=False):
         if not ext:
             ext = '.png'
         ext = ext[1:] # Cut off the period.
-        fig.savefig(out, format=ext, dpi=200)
+        fig.savefig(out, format=ext, dpi=200, transparent=True,
+            bbox_inches='tight', pad_inches=0)
 
     return ax
 
