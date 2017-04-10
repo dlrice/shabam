@@ -31,7 +31,7 @@ The reality:
 - [ ] Optimize vertical space
 - [x] Scale colors based on qual values (Thanks @jeremymcrae)
 - [x] Reflect positive/negative strand (Thanks @jeremymcrae)
-- [ ] Plot multiple sequence files at once (Thanks @jeremymcrae)
+- [x] Plot multiple sequence files at once (Thanks @jeremymcrae)
 - [ ] Allow custom colors from JSON file
 
 
