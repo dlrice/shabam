@@ -18,7 +18,7 @@ COLORS = {
     'N':   [0.0, 0.0, 1.0], # unknown, black
 }
 
-def parseCigar(cigar, bases):
+def parse_cigar(cigar, bases):
     ''' get list of bases, each corresponding to a single reference position
     
     Initial code (with permission) from https://github.com/mgymrek/pybamview
@@ -33,49 +33,51 @@ def parseCigar(cigar, bases):
         entries e.g. 'MATGC'.
     '''
     
-    ENDCHAR = "-"
-    GAPCHAR = "."
-    DELCHAR = "-"
-    
-    BAM = {'CMATCH': 0, 'CINS': 1, 'CDEL': 2, 'CREF_SKIP': 3, 'CSOFT_CLIP': 4,
+    delchar = "-"
+    bam = {'CMATCH': 0, 'CINS': 1, 'CDEL': 2, 'CREF_SKIP': 3, 'CSOFT_CLIP': 4,
         'CHARD_CLIP': 5, 'CPAD': 6, 'CEQUAL': 7, 'CDIFF': 8,}
     
     rep = []
     currentpos = 0
     wasinsert = False
     for operation, length in cigar:
-        if operation in [BAM['CMATCH'], BAM['CEQUAL'], BAM['CDIFF']]: # match (M, X, =)
-            if operation == BAM['CDIFF']:
+        if operation in [bam['CMATCH'], bam['CEQUAL'], bam['CDIFF']]:
+            # match (M, X, =)
+            if operation == bam['CDIFF']:
                 print(operation)
-            for i in range(length):
+            for _ in range(length):
                 if wasinsert:
                     rep[-1] = rep[-1] + bases[currentpos]
                 else:
                     rep.append('M')
                 wasinsert = False
                 currentpos += 1
-        elif operation == BAM['CINS']: # put insertion in next base position (I)
+        elif operation == bam['CINS']:
+            # put insertion in next base position (I)
             if wasinsert:
                 rep[-1] = rep[-1] + bases[currentpos:currentpos + length]
             else:
                 rep.append(bases[currentpos:currentpos + length])
             currentpos = currentpos + length
             wasinsert = True
-        elif operation in [BAM['CDEL'], BAM['CREF_SKIP']]: # deletion (D) or skipped region from the reference (N)
-            for i in range(length):
+        elif operation in [bam['CDEL'], bam['CREF_SKIP']]:
+            # deletion (D) or skipped region from the reference (N)
+            for _ in range(length):
                 if wasinsert:
-                    rep[-1] = rep[-1] + DELCHAR
+                    rep[-1] = rep[-1] + delchar
                 else:
-                    rep.append(DELCHAR)
+                    rep.append(delchar)
                 wasinsert = False
-        elif operation == BAM['CPAD']: # padding (silent deletion from padded reference) (P)
+        elif operation == bam['CPAD']:
+            # padding (silent deletion from padded reference) (P)
             if wasinsert:
-                rep[-1] = rep[-1] + DELCHAR * length
+                rep[-1] = rep[-1] + delchar * length
             else:
-                rep.append(DELCHAR * length)
+                rep.append(delchar * length)
             wasinsert = True
-        elif operation not in [BAM['CSOFT_CLIP'], BAM['CHARD_CLIP']]: # hard clipping or soft clipping
-            sys.stderr.write("ERROR: Invalid CIGAR operation (%s) in read %s \n"%(operation, read.qname))
+        elif operation not in [bam['CSOFT_CLIP'], bam['CHARD_CLIP']]:
+            # hard clipping or soft clipping
+            raise ValueError("Invalid CIGAR operation: {}".format(operation))
     return rep
 
 def plot_read(context, bases, quals=None, x_offset=0, y_offset=0, width=None,
@@ -84,7 +86,7 @@ def plot_read(context, bases, quals=None, x_offset=0, y_offset=0, width=None,
     
     Args:
         context: cairocffi.Context as a plotting device
-        bases: list of bases (per parseRead, so indels are odd)
+        bases: list of bases (per parse_read, so indels are odd)
         quals: list of quality scores for each base
         x_offset: x position to start plotting the read at
         y_offset: y position to plot the read at
@@ -115,7 +117,7 @@ def plot_read(context, bases, quals=None, x_offset=0, y_offset=0, width=None,
             base = 'M_{}'.format(strand)
         
         context.rectangle(x=x_pos, y=y_offset, width=10, height=10)
-        context.set_source_rgba(*COLORS[base], to_alpha(qual))
+        context.set_source_rgba(*(COLORS[base] + [to_alpha(qual)]))
         context.fill()
 
 def plot_insertion(context, bases, x_pos, y_offset):
@@ -194,13 +196,11 @@ def plot_axis(context, start, end, axis_offset):
     # select a font, and figure out the text sizes, so we can align text
     context.select_font_face('Arial')
     context.set_font_size(10)
-    fascent, fdescent, fheight, fxadvance, fyadvance = context.font_extents()
     context.set_line_width(1)
     
     pos = start + -start % 10
     while pos <= end:
-        xbearing, ybearing, width, height, xadvance, yadvance = \
-            context.text_extents(str(pos))
+        _, _, _, height, _, _ = context.text_extents(str(pos))
         
         # center align the text
         x_pos = (pos - start) * 10 + 5
@@ -243,7 +243,8 @@ def plot_grid(context, start, end, axis_offset, height):
         
         pos += 10
 
-def generateRGB(context, reads, start, end, axis_offset, height, ref_seq=None, by_strand=False):
+def _plot(context, reads, start, end, axis_offset, height, ref_seq=None,
+        by_strand=False):
     ''' plots reads to the Context
     
     Args:
@@ -262,7 +263,7 @@ def generateRGB(context, reads, start, end, axis_offset, height, ref_seq=None, b
     '''
     
     if ref_seq is not None:
-        pattern = plot_read(context, ref_seq, y_offset=axis_offset - 10)
+        plot_read(context, ref_seq, y_offset=axis_offset - 10)
     
     width = (end - start) * 10
     
@@ -270,7 +271,7 @@ def generateRGB(context, reads, start, end, axis_offset, height, ref_seq=None, b
         if read is None:
             continue
         
-        pattern = plot_read(context, read['bases'], read['qualities'],
+        plot_read(context, read['bases'], read['qualities'],
             read['position'] - start, read['offset'], width, read['is_reverse'],
             by_strand)
     
@@ -282,7 +283,7 @@ def to_alpha(qual, threshold=35):
     '''
     return min(threshold, qual)/threshold
 
-def parseRead(read, coords):
+def parse_read(read, coords):
     ''' parse the read data into a useable structure
     
     This has an intended side-effect of modifying the coords dictionary.
@@ -302,7 +303,7 @@ def parseRead(read, coords):
         return None
     
     data = {'position': read.pos,
-            'bases': parseCigar(read.cigartuples, read.query),
+            'bases': parse_cigar(read.cigartuples, read.query),
             'is_reverse': read.is_reverse,
             'qualities': read.query_qualities}
     
@@ -395,7 +396,7 @@ def get_height(seqfiles, chrom, start, end, axis_offset):
         
         coords = {}
         for read in seq.fetch(chrom, start, end):
-            unused = parseRead(read, coords)
+            _ = parse_read(read, coords)
         
         depths.append(max(coords))
     
@@ -424,7 +425,7 @@ def fileformat(filename, width, height):
     else:
         ext = None
     
-    assert ext in ['png', 'pdf', 'ps', 'svg', None], 'unknown format: ".{}"'.format(ext)
+    assert ext in ['png', 'pdf', 'ps', 'svg', None], 'unknown format: .{}'.format(ext)
     
     if ext == 'pdf':
         surface = cairo.PDFSurface(filename, width, height)
@@ -453,27 +454,26 @@ def shabam(seqfiles, chrom, start, end, fastafile, out=None, by_strand=False):
         None, or if out is None, returns image plot as bytes-encoded png
     '''
     
-    width = (end - start) * 10
     if type(seqfiles) is not list:
         seqfiles = [seqfiles]
     
     chrom = str(chrom)
-    fasta = pysam.FastaFile(fastafile)
-    reference = fasta.fetch(start=start, end=end, region=chrom)
+    with pysam.FastaFile(fastafile) as handle:
+        reference = handle.fetch(start=start, end=end, region=chrom)
     
     axis_offset = 70
     height = get_height(seqfiles, chrom, start, end, axis_offset)
     
-    out_type, surface = fileformat(out, width, height)
+    out_type, surface = fileformat(out, width=(end - start) * 10, height=height)
     context = cairo.Context(surface)
     
     depths = [axis_offset]
     for seqfile in seqfiles:
         seq = pysam.AlignmentFile(seqfile, 'rb')
         coords = {max(depths): -1e9}
-        reps = ( parseRead(x, coords) for x in seq.fetch(chrom, start, end) )
+        reps = ( parse_read(x, coords) for x in seq.fetch(chrom, start, end) )
         
-        generateRGB(context, reps, start, end, axis_offset, height, reference, by_strand)
+        _plot(context, reps, start, end, axis_offset, height, reference, by_strand)
         reference = None # don't plot the reference in subsequent BAMs
         
         if seqfiles.index(seqfile) < len(seqfiles) - 1:
@@ -485,6 +485,5 @@ def shabam(seqfiles, chrom, start, end, fastafile, out=None, by_strand=False):
     
     if out_type == 'png':
         surface.write_to_png(out)
-    
-    if out is None:
+    elif out_type is None:
         return surface.write_to_png()
