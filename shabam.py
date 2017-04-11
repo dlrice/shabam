@@ -1,35 +1,37 @@
 
-from copy import deepcopy
+import os
+import math
 
 import pysam
-import numpy as np
+import cairocffi as cairo
 
-import matplotlib
-matplotlib.use('agg')
-
-import matplotlib.pyplot as plt
-import os.path
-
-
-BASE2COLORS = {
-    'A' : np.array([0,110,0,255], dtype=np.uint8),
-    'C' : np.array([0,0,255,255], dtype=np.uint8),
-    'G' : np.array([255,150,50,255], dtype=np.uint8),
-    'T' : np.array([255,0,0,255], dtype=np.uint8),
-    'M' : np.array([232,232,232,255], dtype=np.uint8), # match
-    'M_f' : np.array([80,180,255,255], dtype=np.uint8), # match, forward color
-    'M_r' : np.array([255,180,80,255], dtype=np.uint8), # match, reverse color
-    '-' : np.array([230,100,200,255], dtype=np.uint8),  # deletion, pink
-    'I' : np.array([100,30,200,255], dtype=np.uint8), # insertion, purple
-    'N' : np.array([0,0,0,255], dtype=np.uint8), # insertion, purple
+COLORS = {
+    'A':   [0.0, 0.4, 0.0], # green
+    'C':   [0.0, 0.0, 1.0], # blue
+    'G':   [1.0, 0.6, 0.2], # orange
+    'T':   [1.0, 0.0, 0.0], # red
+    'M':   [0.9, 0.9, 0.9], # match, gray
+    'M_f': [0.3, 0.7, 1.0], # forward match, orange
+    'M_r': [1.0, 0.7, 0.3], # reverse match, blue
+    '-':   [0.9, 0.4, 0.8], # deletion, pink
+    'I':   [0.4, 0.1, 0.8], # insertion, purple
+    'N':   [0.0, 0.0, 1.0], # unknown, black
 }
 
 def parseCigar(cigar, bases):
-    """
-    Return list of strings, each item corresponding to a single reference position
+    ''' get list of bases, each corresponding to a single reference position
     
-    Initial code lifted - with permission - from https://github.com/mgymrek/pybamview
-    """
+    Initial code (with permission) from https://github.com/mgymrek/pybamview
+    
+    Args:
+        cigar: list of cigar tuples in read.
+        bases: nucleotide sequence of bases in read.
+    
+    Returns:
+        list of bases, e.g ['A', 'T', 'M']. Matches to the reference are
+        coded as 'M',  deletions as '-', and insertions as multinucleotide
+        entries e.g. 'MATGC'.
+    '''
     
     ENDCHAR = "-"
     GAPCHAR = "."
@@ -49,7 +51,7 @@ def parseCigar(cigar, bases):
                 if wasinsert:
                     rep[-1] = rep[-1] + bases[currentpos]
                 else:
-                    rep.append(bases[currentpos])
+                    rep.append('M')
                 wasinsert = False
                 currentpos += 1
         elif operation == BAM['CINS']: # put insertion in next base position (I)
@@ -76,150 +78,358 @@ def parseCigar(cigar, bases):
             sys.stderr.write("ERROR: Invalid CIGAR operation (%s) in read %s \n"%(operation, read.qname))
     return rep
 
+def plot_read(context, bases, quals=None, x_offset=0, y_offset=0, width=None,
+        is_reverse=False, by_strand=False):
+    ''' plots the bases in a read to a cairocffi.Context
+    
+    Args:
+        context: cairocffi.Context as a plotting device
+        bases: list of bases (per parseRead, so indels are odd)
+        quals: list of quality scores for each base
+        x_offset: x position to start plotting the read at
+        y_offset: y position to plot the read at
+        width: with of image in pixels
+        is_reverse: whether the read is for the reverse strand
+        by_strand: boolean for whether we want to shade reads by strand
+    '''
+    
+    if quals is None:
+        quals = [100] * len(bases)
+    
+    if width is None:
+        width = len(bases) * 10
+    
+    for i, (base, qual) in enumerate(zip(bases, quals)):
+        
+        # TODO: This is an extremely crude adjustment to include insertions.
+        # TODO: This should properly be handled by including the inserted
+        # TODO: sequence at the insertion site.
+        if len(base) > 1:
+            base = 'I'
+        
+        if base == 'M' and by_strand:
+            strand = {True: 'r', False: 'f'}[is_reverse]
+            base = 'M_{}'.format(strand)
+        
+        x_pos = (x_offset + i) * 10
+        if x_pos < 0 or x_pos > width - 1:
+            # don't plot bases outside the required window. This is necessary
+            # when plotting SVGs, otherwise the SVG includes the outside bases.
+            continue
+        
+        context.rectangle(x=x_pos, y=y_offset, width=10, height=10)
+        context.set_source_rgba(*COLORS[base], to_alpha(qual))
+        context.fill()
 
-def generateRGB(representations, plot_start, plot_end, reference, by_strand=False,
-        use_ref=True):
-    plot_length = plot_end - plot_start
-    nrows = len(representations) + 1
-    RGB = np.ones((nrows, plot_length, 4), dtype=np.uint8)*255
+def get_axis_increment(start, end):
+    ''' figure out distance between axis ticks
     
-    # Plot reference
-    if use_ref:
-        for i, base in enumerate(reference):
-            RGB[0, i, :] = deepcopy(BASE2COLORS[base])
+    Args:
+        start: nucleotide position at start of plotting window
+        end: nucleotide position at end of plotting window
     
-    for row_index, representation in enumerate(representations):
-        row_index += 1 # For reference
-        bases = representation['bases']
-        quals = representation['qualities']
-        read_start = representation['position']
-        read_end = read_start + len(bases) - 1
-        start = max(plot_start, read_start)
-        end = min(plot_end, read_end)
-        for i in range(start, end):
-            read_index = i - read_start
-            plot_index = i - plot_start
-            base = bases[read_index]
-            try:
-                qual = quals[read_index]
-            except IndexError:
-                print(read_index, len(quals), quals)
-            
-            if len(base) > 1:
-                base = 'I'
-            
-            if reference[plot_index] == base:
-                base = 'M'
-                if by_strand:
-                    strand = {True: 'r', False: 'f'}[representation['is_reverse']]
-                    base = 'M_{}'.format(strand)
-            
-            color = deepcopy(BASE2COLORS[base])
-            color[3] = to_alpha(qual)
-            RGB[row_index, plot_index, :] = color
+    Returns:
+        distance in base-pairs between axis ticks, so as to get either three or
+        four ticks along the axis
+    '''
     
-    return RGB
+    assert start != end, 'the start position is the same as the end'
+    
+    # get plotting positions
+    delta = abs(end - start)
+    
+    ratios = [1, 2, 5, 4]
+    
+    multiplier = 1
+    while True:
+        for ratio in ratios:
+            if 2 < delta/(ratio * multiplier) < 5:
+                return (ratio * multiplier)
+        
+        if ratio * multiplier > delta:
+            multiplier /= 10
+        else:
+            multiplier *= 10
+
+def plot_axis(context, start, end):
+    ''' plot an axis, with nucldeotide positions for convenience
+    
+    Args:
+        context: cairocffi.Context as a plotting device
+        start: nucleotide position at start of plotting window
+        end: nucleotide position at end of plotting window
+    '''
+    
+    increment = get_axis_increment(start, end)
+    
+    y_pos = 60
+    rotate = -90
+    
+    # select a font, and figure out the text sizes, so we can align text
+    context.select_font_face('Arial')
+    context.set_font_size(10)
+    fascent, fdescent, fheight, fxadvance, fyadvance = context.font_extents()
+    context.set_line_width(1)
+    
+    pos = start + -start % 10
+    while pos <= end:
+        xbearing, ybearing, width, height, xadvance, yadvance = \
+            context.text_extents(str(pos))
+        
+        # center align the text
+        x_pos = (pos - start) * 10 + 5
+        x_text = x_pos + height / 2
+        
+        context.move_to(x_text, y_pos - 10)
+        context.rotate(math.radians(rotate))
+        context.set_source_rgb(0, 0, 0)
+        context.show_text(str(pos))
+        context.rotate(-math.radians(rotate))
+        
+        # and plot a tick mark
+        context.move_to(x_pos, y_pos)
+        context.line_to(x_pos, y_pos - 5)
+        context.stroke()
+        
+        pos += increment
+
+def generateRGB(context, reads, start, end, ref_seq=None, by_strand=False):
+    ''' plots reads to the Context
+    
+    Args:
+        context: cairocffi.Context as a plotting device
+        reads: iterator of parsed read Data
+        start: nucleotide position at start of plotting window
+        end: nucleotide position at end of plotting window
+        ref_seq: reference sequence within plotting window (or None)
+        by_strand: whether to shade reads by strand
+    
+    Returns:
+        max end position at each row, indexed by row number
+        e.g. {10: 100, 20: 150, 30: 50}
+    '''
+    
+    if ref_seq is not None:
+        pattern = plot_read(context, ref_seq, y_offset=60)
+    
+    width = (end - start) * 10
+    
+    for read in reads:
+        if read is None:
+            continue
+        
+        pattern = plot_read(context, read['bases'], read['qualities'],
+            read['position'] - start, read['offset'], width, read['is_reverse'],
+            by_strand)
+    
+    plot_axis(context, start, end)
 
 def to_alpha(qual, threshold=35):
-    return np.floor(255 * (min(threshold, qual)/threshold))
+    ''' convert base quality to an alpha transparency float
+    '''
+    return min(threshold, qual)/threshold
 
-def getRepresentations(reads):
-    representations = []
-    for read in reads:
-        position = read.pos
-        bases = read.query
-        quals = read.query_qualities
-        cigar = read.cigartuples
-        if not cigar:
-            continue
-        representations.append({
-            'position': position,
-            'bases': parseCigar(cigar, bases),
+def parseRead(read, coords):
+    ''' parse the read data into a useable structure
+    
+    This has an intended side-effect of modifying the coords dictionary.
+    
+    Args:
+        read: pysam.AlignedSegment for sequence read
+        coords: dictionary of end positions at each row, indexed by row number
+            e.g. {10: 100, 20: 150, 30: 50}
+    
+    Returns:
+        dictionary that includes start position of read, a list of bases
+        (mapped to M if they match the reference), whether the read is on the
+        reverse strand, a list of base quality scores, and a y-axis offset to
+        avoid superimposing different reads.
+    '''
+    if not read.cigartuples:
+        return None
+    
+    data = {'position': read.pos,
+            'bases': parseCigar(read.cigartuples, read.query),
             'is_reverse': read.is_reverse,
-            'qualities': quals,
-        })
-    return representations
+            'qualities': read.query_qualities}
+    
+    y_pos = get_y_offset(data, coords)
+    data['offset'] = y_pos
+    
+    if y_pos not in coords:
+        coords[y_pos] = -1e9
+    
+    if data['position'] + len(data['bases']) > coords[y_pos]:
+        coords[y_pos] = data['position'] + len(data['bases'])
+    
+    return data
 
-def combine_bams(data):
+def get_y_offset(read, coords):
+    ''' get the y-position for the read, within the first row with open space
+    
+    This is decidedly less than optimal, but will produce a more compact plot.
+    
+    Args:
+        read: dictionary with 'position' and 'bases' entries e.g.
+            {'position': 15555, bases ['M', 'MTA', 'M']}
+        positions: max end position at each row, indexed by row number
+            e.g. {10: 100, 20: 150, 30: 50}
+    
+    Returns:
+        y-axis offset.
+    '''
+    
+    if len(coords) == 0:
+        return 10
+    
+    for key in sorted(coords):
+        if read['position'] > coords[key] + 1:
+            return key
+    
+    return max(coords) + 10
+
+def insert_spacer(context, coords, start, end):
     ''' combine data for one or more bams into a single array
     
     Args:
-        data: list of numpy.ndarrays for bams
-    
+        context: cairocffi.Context as a plotting device
+        coords: max end position at each row, indexed by row number
+            e.g. {10: 100, 20: 150, 30: 50}
+        start: initial nucleotide position of the region being plotted
+        end: final nucleotide position of the region being plotted
+        
     Returns:
-        numpy.ndarray, where the image data for the bams have been combined. We
-        add gaps between successive bams by including white space, and a line.
+        max end position at each row, indexed by row number
+        e.g. {10: 100, 20: 150, 30: 50}
     '''
     
     # define gap between BAMs as white space with a black line in the middle
-    height, width = 2, data[0].shape[1]
-    white = np.ones((height, width, 4), dtype=np.uint8) * 255
-    line = np.ndarray((1, width, 4), np.uint8, np.array([[[0, 0, 0, 255]] * width]))
-    spacer = np.concatenate((white, line, white))
+    lines = ['blank', 'blank', 'black', 'blank', 'blank']
     
-    # insert spacer gaps between between successive bams
-    data = [ item for x in zip(data, [spacer] * len(data)) for item in x ]
-    data.pop()
-    
-    return np.concatenate(tuple(data))
+    for i, line in enumerate(lines):
+        coords[max(coords) + i * 10] = start + end
+        
+        if line != 'blank':
+            context.rectangle(x=0, y=(end - start) * 10, width=10, height=10)
+            context.set_source_rgba(0.0, 0.0, 0.0, 1.0)
+            context.fill()
 
-def pyplot_plotting(RGB, start, end, out):
-    ''' hide the messy details of matplotlib plotting
+    return coords
+
+def get_height(seqfiles, chrom, start, end):
+    ''' get the height of the output image in pixels
+    
+    This requires we loop through all of the reads in the various BAMs, before
+    doing so a second time when we plot the reads, but I can't see an easier way.
+    I can't get RecordingSurface to work, which would be one way to fix this,
+    make a RecordingSurface, figure out the ink extents, then copy the surface
+    to an output PDF or SVG surface.
+    
+    Args:
+        seqfiles: list of paths to sequence files
+        chrom: chromosome to fetch reads from
+        start: start nucleotide of plotting window.
+        end: end nucleotide of plotting window.
+    
+    Returns:
+        height of image plot in pixels.
     '''
     
-    fig, (ax) = plt.subplots(figsize=(RGB.shape[1]/10,RGB.shape[0]/10 + 5))
-    ax.imshow(RGB)
+    depths = [70]
+    for seqfile in seqfiles:
+        seq = pysam.AlignmentFile(seqfile, 'rb')
+        
+        coords = {}
+        for read in seq.fetch(chrom, start, end):
+            unused = parseRead(read, coords)
+        
+        depths.append(max(coords))
     
-    # ensure the x labels (positions) are divisible by ten
-    xticks = np.arange(0.5, end - start + 1, 1)
-    min_x, max_x = min(xticks), max(xticks)
-    xticks = [ x - start % 10 + 0.5 for x in ax.get_xticks() if min_x <= x - start % 10 <= max_x ]
-    ax.set_xticks(xticks)
+    spacer_depth = (len(depths) - 1) * 5 * 10
     
-    # label the positions
-    xticks = np.array(ax.get_xticks().tolist(), dtype=int) + start
-    ax.set_xticklabels(xticks, rotation=90, ha='left')
+    return sum(depths) + spacer_depth + 10
+
+def fileformat(filename, width, height):
+    ''' figure out the output image format
     
-    e = ax.xaxis.set_ticks_position('top')
-    e = ax.get_yaxis().set_visible(False)
+    Args:
+        filename: output filename, which will raise an error if it does not end
+            in one of '.pdf', '.png', '.ps', or '.svg'
+        width: width of the output image, in pixels
+        height: height of the output image, in pixels
     
-    ax.spines['bottom'].set_visible(False)
-    ax.spines['top'].set_visible(False)
-    ax.spines['right'].set_visible(False)
-    ax.spines['left'].set_visible(False)
+    Returns:
+        tuple of cairo.Surface and filetype string e.g. 'pdf' or 'png'
+    '''
     
-    if out:
-        _, ext = os.path.splitext(out)
+    if filename is not None:
+        _, ext = os.path.splitext(filename)
         if not ext:
             ext = '.png'
-        ext = ext[1:] # Cut off the period.
-        fig.savefig(out, format=ext, dpi=200, transparent=True,
-            bbox_inches='tight', pad_inches=0)
+        ext = ext[1:].lower()
+    else:
+        ext = None
     
-    return ax
+    assert ext in ['png', 'pdf', 'ps', 'svg', None], 'unknown format: ".{}"'.format(ext)
+    
+    if ext == 'pdf':
+        surface = cairo.PDFSurface(filename, width, height)
+    elif ext == 'svg':
+        surface = cairo.SVGSurface(filename, width, height)
+    elif ext == 'ps':
+        surface = cairo.PSSurface(filename, width, height)
+    else:
+        surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, width,  height)
+    
+    return ext, surface
 
-def plot(seqfiles, fastafile, chrom, start, end, out=None, by_strand=False):
+def shabam(seqfiles, chrom, start, end, fastafile, out=None, by_strand=False):
+    ''' the plotting function
     
-    if abs(end - start) > 600:
-        print('you are trying to show more than 600 bp in the plot, which is too many')
-        return None
+    Args:
+        seqfiles: list of paths to sequence files
+        chrom: chromosome to fetch reads from
+        start: start nucleotide of plotting window.
+        end: end nucleotide of plotting window.
+        fastafile: path to reference FASTA file.
+        out: path to write image file to, or None to return bytes-encoded png
+        by_strand: whether to shade reads by strand
     
+    Returns:
+        None, or if out is None, returns image plot as bytes-encoded png
+    '''
+    
+    width = (end - start) * 10
     if type(seqfiles) is not list:
         seqfiles = [seqfiles]
     
     chrom = str(chrom)
     fasta = pysam.FastaFile(fastafile)
-    ref = fasta.fetch(start=start, end=end, region=chrom)
+    reference = fasta.fetch(start=start, end=end, region=chrom)
     
-    use_ref = True
-    RGBs = []
+    height = get_height(seqfiles, chrom, start, end)
+    
+    out_type, surface = fileformat(out, width, height)
+    context = cairo.Context(surface)
+    
+    depths = [70]
     for seqfile in seqfiles:
         seq = pysam.AlignmentFile(seqfile, 'rb')
-        reads = seq.fetch(chrom, start, end)
-        representations = getRepresentations(reads)
-        data = generateRGB(representations, start, end, ref, by_strand, use_ref)
+        coords = {max(depths): -1e9}
+        reps = ( parseRead(x, coords) for x in seq.fetch(chrom, start, end) )
         
-        use_ref = False
-        RGBs.append(RGB)
+        generateRGB(context, reps, start, end, reference, by_strand)
+        reference = None # don't plot the reference in subsequent BAMs
+        
+        if seqfiles.index(seqfile) < len(seqfiles) - 1:
+            insert_spacer(context, coords, start, end)
+        
+        depths.append(max(coords))
     
-    return pyplot_plotting(combine_bams(RGBs), start, end, out)
+    context.save()
+    
+    if out_type == 'png':
+        surface.write_to_png(out)
+    
+    if out is None:
+        return surface.write_to_png()
