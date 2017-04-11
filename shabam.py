@@ -100,26 +100,52 @@ def plot_read(context, bases, quals=None, x_offset=0, y_offset=0, width=None,
         width = len(bases) * 10
     
     for i, (base, qual) in enumerate(zip(bases, quals)):
-        
-        # TODO: This is an extremely crude adjustment to include insertions.
-        # TODO: This should properly be handled by including the inserted
-        # TODO: sequence at the insertion site.
-        if len(base) > 1:
-            base = 'I'
-        
-        if base == 'M' and by_strand:
-            strand = {True: 'r', False: 'f'}[is_reverse]
-            base = 'M_{}'.format(strand)
-        
         x_pos = (x_offset + i) * 10
         if x_pos < 0 or x_pos > width - 1:
             # don't plot bases outside the required window. This is necessary
             # when plotting SVGs, otherwise the SVG includes the outside bases.
             continue
         
+        if len(base) > 1:
+            plot_insertion(context, base, x_pos, y_offset)
+            base = 'M'
+        
+        if base == 'M' and by_strand:
+            strand = {True: 'r', False: 'f'}[is_reverse]
+            base = 'M_{}'.format(strand)
+        
         context.rectangle(x=x_pos, y=y_offset, width=10, height=10)
         context.set_source_rgba(*COLORS[base], to_alpha(qual))
         context.fill()
+
+def plot_insertion(context, bases, x_pos, y_offset):
+    ''' plot inserted bases at the insertion site
+    
+    Args:
+        context: cairocffi.Context as a plotting device
+        bases: string of inserted bases
+        x_pos: position of insertion (in pixels)
+        y_offset: y position to plot the read at
+    '''
+    
+    # select a font, and figure out the text sizes, so we can align text
+    context.select_font_face('Arial')
+    context.set_font_size(7)
+    _, _, width, _, _, _ = context.text_extents(bases)
+    
+    context.move_to(x_pos + 10 - width/2, y_offset - 3)
+    context.set_source_rgb(0, 0, 0)
+    context.show_text(bases)
+    
+    # plot an arrow to indicate the insertion point
+    context.set_line_width(1)
+    context.move_to(x_pos + 10 - 1.5, y_offset - 1.5)
+    context.line_to(x_pos + 10, y_offset)
+    context.line_to(x_pos + 10 + 1.5, y_offset - 1.5)
+    context.close_path()
+    context.stroke_preserve()
+    context.set_source_rgb(0, 0, 0)
+    context.fill()
 
 def get_axis_increment(start, end):
     ''' figure out distance between axis ticks
