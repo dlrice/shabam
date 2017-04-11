@@ -151,18 +151,18 @@ def get_axis_increment(start, end):
         else:
             multiplier *= 10
 
-def plot_axis(context, start, end):
+def plot_axis(context, start, end, axis_offset):
     ''' plot an axis, with nucldeotide positions for convenience
     
     Args:
         context: cairocffi.Context as a plotting device
         start: nucleotide position at start of plotting window
         end: nucleotide position at end of plotting window
+        axis_offset: height to account for in axis plotting.
     '''
     
     increment = get_axis_increment(start, end)
     
-    y_pos = 60
     rotate = -90
     
     # select a font, and figure out the text sizes, so we can align text
@@ -180,20 +180,20 @@ def plot_axis(context, start, end):
         x_pos = (pos - start) * 10 + 5
         x_text = x_pos + height / 2
         
-        context.move_to(x_text, y_pos - 10)
+        context.move_to(x_text, axis_offset - 10)
         context.rotate(math.radians(rotate))
         context.set_source_rgb(0, 0, 0)
         context.show_text(str(pos))
         context.rotate(-math.radians(rotate))
         
         # and plot a tick mark
-        context.move_to(x_pos, y_pos)
-        context.line_to(x_pos, y_pos - 5)
+        context.move_to(x_pos, axis_offset)
+        context.line_to(x_pos, axis_offset - 5)
         context.stroke()
         
         pos += increment
 
-def generateRGB(context, reads, start, end, ref_seq=None, by_strand=False):
+def generateRGB(context, reads, start, end, axis_offset, height, ref_seq=None, by_strand=False):
     ''' plots reads to the Context
     
     Args:
@@ -201,6 +201,8 @@ def generateRGB(context, reads, start, end, ref_seq=None, by_strand=False):
         reads: iterator of parsed read Data
         start: nucleotide position at start of plotting window
         end: nucleotide position at end of plotting window
+        axis_offset: height to account for in axis plotting.
+        height: total height of the plotted image in pixels.
         ref_seq: reference sequence within plotting window (or None)
         by_strand: whether to shade reads by strand
     
@@ -210,7 +212,7 @@ def generateRGB(context, reads, start, end, ref_seq=None, by_strand=False):
     '''
     
     if ref_seq is not None:
-        pattern = plot_read(context, ref_seq, y_offset=60)
+        pattern = plot_read(context, ref_seq, y_offset=axis_offset - 10)
     
     width = (end - start) * 10
     
@@ -222,7 +224,7 @@ def generateRGB(context, reads, start, end, ref_seq=None, by_strand=False):
             read['position'] - start, read['offset'], width, read['is_reverse'],
             by_strand)
     
-    plot_axis(context, start, end)
+    plot_axis(context, start, end, axis_offset - 10)
 
 def to_alpha(qual, threshold=35):
     ''' convert base quality to an alpha transparency float
@@ -316,7 +318,7 @@ def insert_spacer(context, coords, start, end):
 
     return coords
 
-def get_height(seqfiles, chrom, start, end):
+def get_height(seqfiles, chrom, start, end, axis_offset):
     ''' get the height of the output image in pixels
     
     This requires we loop through all of the reads in the various BAMs, before
@@ -330,12 +332,13 @@ def get_height(seqfiles, chrom, start, end):
         chrom: chromosome to fetch reads from
         start: start nucleotide of plotting window.
         end: end nucleotide of plotting window.
+        axis_offset: height to account for in axis plotting.
     
     Returns:
         height of image plot in pixels.
     '''
     
-    depths = [70]
+    depths = [axis_offset]
     for seqfile in seqfiles:
         seq = pysam.AlignmentFile(seqfile, 'rb')
         
@@ -345,7 +348,7 @@ def get_height(seqfiles, chrom, start, end):
         
         depths.append(max(coords))
     
-    spacer_depth = (len(depths) - 1) * 5 * 10
+    spacer_depth = (len(depths) - 2) * 5 * 10
     
     return sum(depths) + spacer_depth + 10
 
@@ -407,18 +410,19 @@ def shabam(seqfiles, chrom, start, end, fastafile, out=None, by_strand=False):
     fasta = pysam.FastaFile(fastafile)
     reference = fasta.fetch(start=start, end=end, region=chrom)
     
-    height = get_height(seqfiles, chrom, start, end)
+    axis_offset = 70
+    height = get_height(seqfiles, chrom, start, end, axis_offset)
     
     out_type, surface = fileformat(out, width, height)
     context = cairo.Context(surface)
     
-    depths = [70]
+    depths = [axis_offset]
     for seqfile in seqfiles:
         seq = pysam.AlignmentFile(seqfile, 'rb')
         coords = {max(depths): -1e9}
         reps = ( parseRead(x, coords) for x in seq.fetch(chrom, start, end) )
         
-        generateRGB(context, reps, start, end, reference, by_strand)
+        generateRGB(context, reps, start, end, axis_offset, height, reference, by_strand)
         reference = None # don't plot the reference in subsequent BAMs
         
         if seqfiles.index(seqfile) < len(seqfiles) - 1:
