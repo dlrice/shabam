@@ -462,7 +462,7 @@ def shabam(seqfiles, chrom, start, end, fastafile, out=None, by_strand=False):
     with pysam.FastaFile(fastafile) as handle:
         reference = handle.fetch(start=start, end=end, region=chrom)
     
-    axis_offset = 70
+    axis_offset = 75
     height = get_height(seqfiles, chrom, start, end, axis_offset)
     
     out_type, surface = fileformat(out, width=(end - start) * 10, height=height)
