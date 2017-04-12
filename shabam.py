@@ -364,8 +364,9 @@ def insert_spacer(context, coords, start, end):
         coords[max(coords) + i * 10] = start + end
         
         if line != 'blank':
-            context.rectangle(x=0, y=(end - start) * 10, width=10, height=10)
-            context.set_source_rgba(0.0, 0.0, 0.0, 1.0)
+            width = (end - start) * 10
+            context.rectangle(x=0, y=max(coords) + 10, width=width, height=10)
+            context.set_source_rgba(0.4, 0.4, 0.4, 1.0)
             context.fill()
 
     return coords
