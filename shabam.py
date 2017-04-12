@@ -49,7 +49,7 @@ def parse_cigar(cigar, bases):
                 if wasinsert:
                     rep[-1] = rep[-1] + bases[currentpos]
                 else:
-                    rep.append('M')
+                    rep.append(bases[currentpos])
                 wasinsert = False
                 currentpos += 1
         elif operation == bam['CINS']:
@@ -283,7 +283,7 @@ def to_alpha(qual, threshold=35):
     '''
     return min(threshold, qual)/threshold
 
-def parse_read(read, coords):
+def parse_read(read, coords, ref=None, start=0):
     ''' parse the read data into a useable structure
     
     This has an intended side-effect of modifying the coords dictionary.
@@ -292,6 +292,8 @@ def parse_read(read, coords):
         read: pysam.AlignedSegment for sequence read
         coords: dictionary of end positions at each row, indexed by row number
             e.g. {10: 100, 20: 150, 30: 50}
+        ref: reference sequence, or None
+        start: position which the reference starts at
     
     Returns:
         dictionary that includes start position of read, a list of bases
@@ -306,6 +308,14 @@ def parse_read(read, coords):
             'bases': parse_cigar(read.cigartuples, read.query),
             'is_reverse': read.is_reverse,
             'qualities': read.query_qualities}
+    
+    # convert reference matches to 'M', so we can later color as reference bases
+    if ref is not None:
+        offset = read.pos - start
+        for i, base in enumerate(data['bases']):
+            if 0 <= offset + i < len(ref) and \
+                    data['bases'][i] == ref[offset + i]:
+                data['bases'][i] = 'M'
     
     y_pos = get_y_offset(data, coords)
     data['offset'] = y_pos
@@ -461,6 +471,7 @@ def shabam(seqfiles, chrom, start, end, fastafile, out=None, by_strand=False):
     chrom = str(chrom)
     with pysam.FastaFile(fastafile) as handle:
         reference = handle.fetch(start=start, end=end, region=chrom)
+        ref = reference
     
     axis_offset = 75
     height = get_height(seqfiles, chrom, start, end, axis_offset)
@@ -472,7 +483,7 @@ def shabam(seqfiles, chrom, start, end, fastafile, out=None, by_strand=False):
     for seqfile in seqfiles:
         seq = pysam.AlignmentFile(seqfile, 'rb')
         coords = {max(depths): -1e9}
-        reps = ( parse_read(x, coords) for x in seq.fetch(chrom, start, end) )
+        reps = ( parse_read(x, coords, ref, start) for x in seq.fetch(chrom, start, end) )
         
         _plot(context, reps, start, end, axis_offset, height, reference, by_strand)
         reference = None # don't plot the reference in subsequent BAMs
