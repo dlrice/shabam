@@ -1,5 +1,6 @@
 
 import os
+from collections import OrderedDict
 
 import pysam
 import cairocffi as cairo
@@ -107,7 +108,7 @@ def shabam(seqfiles, chrom, start, end, fastafile, out=None, by_strand=False):
     depths = [axis_offset]
     for seqfile in seqfiles:
         seq = pysam.AlignmentFile(seqfile, 'rb')
-        coords = {max(depths): -1e9}
+        coords = OrderedDict({max(depths): -1e9})
         reps = ( parse_read(x, coords, ref, start) for x in seq.fetch(chrom, start, end) )
         
         _plot(context, reps, start, end, axis_offset, height, reference, by_strand)

@@ -1,5 +1,6 @@
 
 import os
+from collections import OrderedDict
 
 import pysam
 import cairocffi as cairo
@@ -30,7 +31,7 @@ def get_height(seqfiles, chrom, start, end, axis_offset):
     for seqfile in seqfiles:
         seq = pysam.AlignmentFile(seqfile, 'rb')
         
-        coords = {}
+        coords = OrderedDict()
         for read in seq.fetch(chrom, start, end):
             _ = parse_read(read, coords)
         
