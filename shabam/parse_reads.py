@@ -62,7 +62,7 @@ def get_y_offset(read, coords):
     if len(coords) == 0:
         return 10
     
-    for key in sorted(coords):
+    for key in coords:
         if read['position'] > coords[key] + 1:
             return key
     
