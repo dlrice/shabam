@@ -6,8 +6,8 @@ def parse_read(read, coords, ref=None, start=0):
     
     Args:
         read: pysam.AlignedSegment for sequence read
-        coords: dictionary of end positions at each row, indexed by row number
-            e.g. {10: 100, 20: 150, 30: 50}
+        coords: ordered dictionary of end positions at each row, indexed by row
+            number e.g. {10: 100, 20: 150, 30: 50}
         ref: reference sequence, or None
         start: position which the reference starts at
     
@@ -52,8 +52,8 @@ def get_y_offset(read, coords):
     Args:
         read: dictionary with 'position' and 'bases' entries e.g.
             {'position': 15555, bases ['M', 'MTA', 'M']}
-        positions: max end position at each row, indexed by row number
-            e.g. {10: 100, 20: 150, 30: 50}
+        positions: ordered dictionary of max end position at each row, indexed
+            by row number e.g. {10: 100, 20: 150, 30: 50}
     
     Returns:
         y-axis offset.
