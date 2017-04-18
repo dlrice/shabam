@@ -1,4 +1,6 @@
 
+from __future__ import division
+
 import math
 
 def plot_axis(context, start, end, axis_offset):
