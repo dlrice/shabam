@@ -45,7 +45,10 @@ def plot_read(context, bases, quals=None, x_offset=0, y_offset=0, width=None,
 def to_alpha(qual, threshold=35):
     ''' convert base quality to an alpha transparency float
     '''
-    return min(threshold, qual)/threshold
+    try:
+        return min(threshold, qual)/threshold
+    except TypeError:
+        return 1.0
 
 def plot_insertion(context, bases, x_pos, y_offset):
     ''' plot inserted bases at the insertion site
