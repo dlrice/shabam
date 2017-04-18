@@ -23,7 +23,7 @@ def parse_read(read, coords, ref=None, start=0):
     data = {'position': read.pos,
             'bases': parse_cigar(read.cigartuples, read.query),
             'is_reverse': read.is_reverse,
-            'qualities': read.query_qualities}
+            'qualities': parse_cigar(read.cigartuples, read.query_qualities)}
     
     # convert reference matches to 'M', so we can later color as reference bases
     if ref is not None:
@@ -97,7 +97,7 @@ def parse_cigar(cigar, bases):
                 print(operation)
             for _ in range(length):
                 if wasinsert:
-                    rep[-1] = rep[-1] + bases[currentpos]
+                    rep[-1] += bases[currentpos]
                 else:
                     rep.append(bases[currentpos])
                 wasinsert = False
@@ -105,7 +105,7 @@ def parse_cigar(cigar, bases):
         elif operation == bam['CINS']:
             # put insertion in next base position (I)
             if wasinsert:
-                rep[-1] = rep[-1] + bases[currentpos:currentpos + length]
+                rep[-1] += bases[currentpos:currentpos + length]
             else:
                 rep.append(bases[currentpos:currentpos + length])
             currentpos = currentpos + length
@@ -114,14 +114,14 @@ def parse_cigar(cigar, bases):
             # deletion (D) or skipped region from the reference (N)
             for _ in range(length):
                 if wasinsert:
-                    rep[-1] = rep[-1] + delchar
+                    rep[-1] += delchar
                 else:
                     rep.append(delchar)
                 wasinsert = False
         elif operation == bam['CPAD']:
             # padding (silent deletion from padded reference) (P)
             if wasinsert:
-                rep[-1] = rep[-1] + delchar * length
+                rep[-1] += delchar * length
             else:
                 rep.append(delchar * length)
             wasinsert = True
