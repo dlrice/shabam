@@ -15,12 +15,18 @@ class TestUtils(unittest.TestCase):
         
         path = os.path.join(os.path.dirname(__file__), 'example.bam')
         
-        height = get_height([path], '16', 48000000, 48000400, 0)
-        self.assertEqual(height, 100)
+        height = get_height([path], '1', 30000, 30400, 0)
+        self.assertEqual(height, 540)
         
         # test that we can allow for axis spacing
-        height = get_height([path], '16', 48000000, 48000400, 50)
-        self.assertEqual(height, 150)
+        height = get_height([path], '1', 30000, 30400, 50)
+        self.assertEqual(height, 590)
+        
+        # test if we use a region without reads, we get an error
+        # TODO: this is possible not the best way to handle this. Could be
+        # TODO: better to return depths of zero (plus the axis offset)
+        with self.assertRaises(ValueError):
+            get_height([path], '2', 30000, 30400, 50)
     
     def test_fileformat_png(self):
         ''' test we can pick png output format
