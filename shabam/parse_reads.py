@@ -108,7 +108,7 @@ def parse_cigar(cigar, bases):
                 rep[-1] += bases[currentpos:currentpos + length]
             else:
                 rep.append(bases[currentpos:currentpos + length])
-            currentpos = currentpos + length
+            currentpos += length
             wasinsert = True
         elif operation in [bam['CDEL'], bam['CREF_SKIP']]:
             # deletion (D) or skipped region from the reference (N)
