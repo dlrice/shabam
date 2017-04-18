@@ -75,7 +75,7 @@ def insert_spacer(context, coords, start, end):
 
     return coords
 
-def shabam(seqfiles, chrom, start, end, fastafile, out=None, by_strand=False):
+def seqplot(seqfiles, chrom, start, end, fastafile, out=None, by_strand=False):
     ''' the plotting function
     
     Args:
