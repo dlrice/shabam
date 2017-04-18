@@ -114,7 +114,7 @@ def parse_cigar(cigar, values):
             wasinsert = True
         elif code not in [bam['CSOFT_CLIP'], bam['CHARD_CLIP']]:
             # hard clipping or soft clipping
-            raise ValueError("Invalid CIGAR operation: {}".format(operation))
+            raise ValueError("Invalid CIGAR operation: {}".format(code))
     return rep
 
 def cigar_join(initial, value, wasinsert):
