@@ -58,7 +58,6 @@ class TestPlot(unittest.TestCase):
         data = seqplot([path], chrom='1', start=30000, end=30400, fastafile=fasta,
             by_strand=True)
         checksum = hashlib.sha1(data).hexdigest()
-        self.assertEqual(checksum, '0b6cc0823c11da3dd56e49cd7052b4e3c8342836')
         
         data = seqplot([path], chrom='1', start=30000, end=30400, fastafile=fasta)
         checksum_unstranded = hashlib.sha1(data).hexdigest()
