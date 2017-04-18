@@ -13,7 +13,7 @@ class TestUtils(unittest.TestCase):
         ''' check that we can get the image height in pixels
         '''
         
-        path = os.path.join(os.path.dirname(__file__), 'example.bam')
+        path = os.path.join(os.path.dirname(__file__), 'data', 'example.bam')
         
         height = get_height([path], '1', 30000, 30400, 0)
         self.assertEqual(height, 540)
