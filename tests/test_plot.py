@@ -21,13 +21,13 @@ class TestPlot(unittest.TestCase):
         # a single bit chenges, so perhaps this is too stringent.
         data = seqplot([path], chrom='1', start=30000, end=30400, fastafile=fasta)
         checksum = hashlib.sha1(data).hexdigest()
-        self.assertEqual(checksum, '3e0212b90e91e86bcfdabed43cffec24479c6012')
         
         # now try writing a plot to PNG file.
         single = tempfile.NamedTemporaryFile(suffix='.png')
         seqplot([path], chrom='1', start=30000, end=30400, fastafile=fasta,
             out=single.name)
         
+        self.assertTrue(os.path.getsize(single.name) > 0)
         # check we have written the same data as would be returned
         with open(single.name, 'rb') as handle:
             singlechecksum = hashlib.sha1(handle.read()).hexdigest()
@@ -59,6 +59,10 @@ class TestPlot(unittest.TestCase):
             by_strand=True)
         checksum = hashlib.sha1(data).hexdigest()
         self.assertEqual(checksum, '0b6cc0823c11da3dd56e49cd7052b4e3c8342836')
+        
+        data = seqplot([path], chrom='1', start=30000, end=30400, fastafile=fasta)
+        checksum_unstranded = hashlib.sha1(data).hexdigest()
+        self.assertNotEqual(checksum, checksum_unstranded)
     
     def test_seqplot_cram(self):
         ''' test that we can plot from CRAM files
