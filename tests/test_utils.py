@@ -1,6 +1,7 @@
 
 import os
 import unittest
+import tempfile
 
 import cairocffi as cairo
 
@@ -24,7 +25,8 @@ class TestUtils(unittest.TestCase):
     def test_fileformat_png(self):
         ''' test we can pick png output format
         '''
-        ext, surf = fileformat('a.png', 50, 100)
+        temp = tempfile.NamedTemporaryFile(suffix='.png')
+        ext, surf = fileformat(temp.name, 50, 100)
         self.assertEqual(ext, 'png')
         self.assertEqual(type(surf), cairo.ImageSurface)
         
@@ -35,21 +37,26 @@ class TestUtils(unittest.TestCase):
     def test_fileformat_pdf(self):
         ''' test we can pick pdf output format
         '''
-        ext, surf = fileformat('a.pdf', 50, 100)
+        temp = tempfile.NamedTemporaryFile(suffix='.pdf')
+        ext, surf = fileformat(temp.name, 50, 100)
         self.assertEqual(ext, 'pdf')
         self.assertEqual(type(surf), cairo.PDFSurface)
         
     def test_fileformat_svg(self):
         ''' test we can pick svg output format
         '''
-        ext, surf = fileformat('a.svg', 50, 100)
+        
+        temp = tempfile.NamedTemporaryFile(suffix='.svg')
+        print(temp.name)
+        ext, surf = fileformat(temp.name, 50, 100)
         self.assertEqual(ext, 'svg')
         self.assertEqual(type(surf), cairo.SVGSurface)
         
     def test_fileformat_ps(self):
         ''' test we can pick ps output format
         '''
-        ext, surf = fileformat('a.ps', 50, 100)
+        temp = tempfile.NamedTemporaryFile(suffix='.ps')
+        ext, surf = fileformat(temp.name, 50, 100)
         self.assertEqual(ext, 'ps')
         self.assertEqual(type(surf), cairo.PSSurface)
         
