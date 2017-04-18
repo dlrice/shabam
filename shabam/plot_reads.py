@@ -1,4 +1,6 @@
 
+from __future__ import division
+
 from shabam.colors import COLORS
 
 def plot_read(context, bases, quals=None, x_offset=0, y_offset=0, width=None,
