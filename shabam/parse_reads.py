@@ -28,7 +28,7 @@ def parse_read(read, coords, ref=None, start=0):
     # convert reference matches to 'M', so we can later color as reference bases
     if ref is not None:
         offset = read.pos - start
-        for i, base in enumerate(data['bases']):
+        for i in range(len(data['bases'])):
             if 0 <= offset + i < len(ref) and \
                     data['bases'][i] == ref[offset + i]:
                 data['bases'][i] = 'M'
@@ -68,19 +68,20 @@ def get_y_offset(read, coords):
     
     return max(coords) + 10
 
-def parse_cigar(cigar, bases):
-    ''' get list of bases, each corresponding to a single reference position
+def parse_cigar(cigar, values):
+    ''' get list of data, each corresponding to a single reference position
     
     Initial code (with permission) from https://github.com/mgymrek/pybamview
     
     Args:
         cigar: list of cigar tuples in read.
-        bases: nucleotide sequence of bases in read.
+        values: list of data, either nucleotide sequence of values in read
+            or list of quality scores.
     
     Returns:
-        list of bases, e.g ['A', 'T', 'M']. Matches to the reference are
-        coded as 'M',  deletions as '-', and insertions as multinucleotide
-        entries e.g. 'MATGC'.
+        list of values, e.g ['A', 'T', 'C'] or [10, 5, 30]. Positions
+        corresponding to deletions contain '-', and insertions have multiple
+        data points e.g. ['A', 'TC'] or [10, [5, 30]].
     '''
     
     delchar = "-"
@@ -88,44 +89,54 @@ def parse_cigar(cigar, bases):
         'CHARD_CLIP': 5, 'CPAD': 6, 'CEQUAL': 7, 'CDIFF': 8,}
     
     rep = []
-    currentpos = 0
+    pos = 0
     wasinsert = False
-    for operation, length in cigar:
-        if operation in [bam['CMATCH'], bam['CEQUAL'], bam['CDIFF']]:
+    for code, length in cigar:
+        if code in [bam['CMATCH'], bam['CEQUAL'], bam['CDIFF']]:
             # match (M, X, =)
-            if operation == bam['CDIFF']:
-                print(operation)
             for _ in range(length):
-                if wasinsert:
-                    rep[-1] += bases[currentpos]
-                else:
-                    rep.append(bases[currentpos])
+                rep = cigar_join(rep, values[pos], wasinsert)
                 wasinsert = False
-                currentpos += 1
-        elif operation == bam['CINS']:
+                pos += 1
+        elif code == bam['CINS']:
             # put insertion in next base position (I)
-            if wasinsert:
-                rep[-1] += bases[currentpos:currentpos + length]
-            else:
-                rep.append(bases[currentpos:currentpos + length])
-            currentpos += length
+            rep = cigar_join(rep, values[pos:pos + length], wasinsert)
+            pos += length
             wasinsert = True
-        elif operation in [bam['CDEL'], bam['CREF_SKIP']]:
+        elif code in [bam['CDEL'], bam['CREF_SKIP']]:
             # deletion (D) or skipped region from the reference (N)
             for _ in range(length):
-                if wasinsert:
-                    rep[-1] += delchar
-                else:
-                    rep.append(delchar)
+                rep = cigar_join(rep, delchar, wasinsert)
                 wasinsert = False
-        elif operation == bam['CPAD']:
+        elif code == bam['CPAD']:
             # padding (silent deletion from padded reference) (P)
-            if wasinsert:
-                rep[-1] += delchar * length
-            else:
-                rep.append(delchar * length)
+            rep = cigar_join(rep, delchar * length, wasinsert)
             wasinsert = True
-        elif operation not in [bam['CSOFT_CLIP'], bam['CHARD_CLIP']]:
+        elif code not in [bam['CSOFT_CLIP'], bam['CHARD_CLIP']]:
             # hard clipping or soft clipping
             raise ValueError("Invalid CIGAR operation: {}".format(operation))
     return rep
+
+def cigar_join(initial, value, wasinsert):
+    ''' adds a value to a list
+    
+    Args:
+        initial: list to be added to
+        value: data point to be added. This is either a string or an integer
+        wasinsert: whether the previous position contained an insertion
+    
+    Returns:
+        list with value added appropriately
+    '''
+    if not wasinsert:
+        initial.append(value)
+        return initial
+    
+    # now handle insertions. Concatenate strings (e.g. base-pairs), but
+    # append integers (e.g. quality scores).
+    try:
+        initial[-1] += value
+    except TypeError:
+        initial[-1].append(value)
+    
+    return initial

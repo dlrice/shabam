@@ -32,6 +32,7 @@ def plot_read(context, bases, quals=None, x_offset=0, y_offset=0, width=None,
         if len(base) > 1:
             plot_insertion(context, base, x_pos, y_offset)
             base = 'M'
+            qual = qual[0]
         
         if base == 'M' and by_strand:
             strand = {True: 'r', False: 'f'}[is_reverse]

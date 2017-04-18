@@ -108,3 +108,18 @@ class TestReadParsing(unittest.TestCase):
         # check we raise an error with unknown cigar codes
         with self.assertRaises(ValueError):
             parse_cigar([(0, 2), (9, 2)], bases)
+    
+    def test_parse_cigar_qualities(self):
+        ''' test that cigar parsing works correctly when parsing quality scores
+        '''
+        
+        scores = [40, 10, 20, 5]
+        self.assertEqual(parse_cigar([(0, 4)], scores), [40, 10, 20, 5])
+        
+        # test when an insertion is present
+        self.assertEqual(parse_cigar([(0, 1), (1, 2), (0, 1)], scores),
+            [40, [10, 20, 5]])
+        
+        # test when a deletion is present
+        self.assertEqual(parse_cigar([(0, 2), (2, 2), (0, 2)], scores),
+            [40, 10, '-' , '-', 20, 5])
