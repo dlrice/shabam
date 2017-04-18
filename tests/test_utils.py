@@ -47,7 +47,6 @@ class TestUtils(unittest.TestCase):
         '''
         
         temp = tempfile.NamedTemporaryFile(suffix='.svg')
-        print(temp.name)
         ext, surf = fileformat(temp.name, 50, 100)
         self.assertEqual(ext, 'svg')
         self.assertEqual(type(surf), cairo.SVGSurface)
