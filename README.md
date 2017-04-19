@@ -13,7 +13,6 @@ Install shabam:
 pip install git+git://github.com/dlrice/shabam.git --user
 ```
 
-
 ## The dream
 ```py
 from shabam import seqplot
@@ -30,7 +29,18 @@ seqplot('example.bam', chrom='1', start=30243, end=30321,
 - export PDF, PNG, SVG or PS formatted plots with matching filename extensions
 - seqplot returns PNG data if you don't include an output filename
 
-## Improvements to realize the dream
+### Command line version
+```sh
+./bin/shabam.py \
+  --seqfiles example.bam \
+  --chrom 2 \
+  --start 30243 \
+  --end 30321 \
+  --fastafile reference.fasta \
+  --out plot.svg
+```
+
+## Further improvements to the dream
 - [ ] Use consensus sequence when we don't provide a reference sequence
 - [ ] Allow custom colors
 - [ ] Compute proportion of variants at any site
