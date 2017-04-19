@@ -21,7 +21,7 @@ seqplot('example.bam', chrom='1', start=30243, end=30321,
     fastafile='reference.fasta', out='plot.svg')
 ```
 
-![Reality](/tests/data/reality.svgz)
+![Reality](/tests/data/reality.svg)
 
 ### Plotting options
 - shade reads by strand with `by_strand=True`
