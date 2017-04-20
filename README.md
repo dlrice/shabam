@@ -47,6 +47,14 @@ seqplot('example.bam', chrom='1', start=30243, end=30321,
 - [ ] Plot read depth
 - [ ] At positions with proportion of variants > threshold, reflect proportion
   with base colors
+- [ ] Option to scale plotted base size, currently at 10 pixels per base
+- [ ] Optionally shade plots deepVariant style:
+    - red channel: nucleotide
+    - blue channel: read strand
+    - green channel: base quality
+    - alpha: base supports ref or alt
+- [ ] Flatten vertical plotting in high depth sequence data
+- [ ] Down-sample reads for extremely high depth sequence data (>1000X)
 
 ## Credit
 Initial cigar parsing code lifted with permission from
