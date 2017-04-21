@@ -1,53 +1,61 @@
 # shabam
-A python tool to create sequence plots from bam/cram files.
+A python tool to plot BAM or CRAM sequence reads.
 
-The dream:
-
+## Installation
+install [cairo](https://www.cairographics.org/download/) if not already
+installed:
+```sh
+sudo apt-get install libcairo2-dev
 ```
-import shabam
-shabam.plot('sequence.bam', chrom=2, start=48000000, end=48000080, file='plot.png')
+
+Install shabam:
+```sh
+pip install git+git://github.com/dlrice/shabam.git --user
 ```
 
-![The dream](/dream.png?raw=true)
+## The dream
+```py
+from shabam import seqplot
+seqplot('example.bam', chrom='1', start=30243, end=30321,
+    fastafile='reference.fasta', out='plot.svg')
+```
 
-The reality:
+![Reality](/tests/data/reality.svg)
 
-![Reality](/reality.png?raw=true)
+### Plotting options
+- shade reads by strand with `by_strand=True`
+- plot multiple sequence files together with a list of paths e.g.
+  `['child.bam', 'mom.bam', 'dad.bam']`
+- export PDF, PNG, SVG or PS formatted plots with matching filename extensions
+- seqplot returns PNG data if you don't include an output filename
 
-## Steps to realize the dream
+### Command line version
+```sh
+./bin/shabam.py \
+  --seqfiles example.bam \
+  --chrom 2 \
+  --start 30243 \
+  --end 30321 \
+  --fastafile reference.fasta \
+  --out plot.svg
+```
 
-#### Create text based view (similar to samtools tview)
-- [x] Extract reads from a file
-- [x] Read a reference file
-- [x] Line up reads from a bam with a reference
-- [x] Print reads in terminal
-
-
-#### Sequence plot
-- [x] Plot bases as a single matrix RGB triples
-- [x] Save plot as png
-- [ ] Deal with insertions/deletions
-- [ ] Gridline every 10 bases
-- [ ] Optimize vertical space
-- [x] Scale colors based on qual values (Thanks @jeremymcrae)
-- [x] Reflect positive/negative strand (Thanks @jeremymcrae)
-- [x] Plot multiple sequence files at once (Thanks @jeremymcrae)
-- [ ] Allow custom colors from JSON file
-
-
-#### Historgram plot
+## Further improvements to the dream
+- [ ] Use consensus sequence when we don't provide a reference sequence
+- [ ] Allow custom colors
 - [ ] Compute proportion of variants at any site
 - [ ] Plot read depth
-- [ ] At positions with proportion of variants > threshold, reflect proportion with base colors
-
-
-## Development setup
-1. Install python ([try miniconda](http://conda.pydata.org/miniconda.html) if you haven't got it)
-2. Install sampy, matplotlib, numpy
-3. Ensure git is installed (try `git --version`)
-4. Ensure you have a github account.
-5. Fork this repository and clone onto your local machine.
-
+- [ ] At positions with proportion of variants > threshold, reflect proportion
+  with base colors
+- [ ] Option to scale plotted base size, currently at 10 pixels per base
+- [ ] Optionally shade plots deepVariant style:
+    - red channel: nucleotide
+    - blue channel: read strand
+    - green channel: base quality
+    - alpha: base supports ref or alt
+- [ ] Flatten vertical plotting in high depth sequence data
+- [ ] Down-sample reads for extremely high depth sequence data (>1000X)
 
 ## Credit
-Initial cigar parsing code lifted with permission from [pybamview](https://github.com/mgymrek/pybamview).
+Initial cigar parsing code lifted with permission from
+[pybamview](https://github.com/mgymrek/pybamview).
