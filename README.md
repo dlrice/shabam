@@ -5,7 +5,10 @@ A python tool to plot BAM or CRAM sequence reads.
 install [cairo](https://www.cairographics.org/download/) if not already
 installed:
 ```sh
-sudo apt-get install libcairo2-dev
+# macOS via conda, or via homebrew (choose one, then set the library path)
+conda install cairo; CAIRO=`conda info --root`/pkgs/cairo-1.14.8-0/lib
+brew install cairo; CAIRO=`brew --prefix cairo`
+export DYLD_LIBRARY_PATH=${CAIRO}
 ```
 
 Install shabam:
