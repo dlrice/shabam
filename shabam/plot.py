@@ -10,6 +10,8 @@ from shabam.plot_reads import plot_read
 from shabam.plot_axis import plot_axis
 from shabam.plot_gridlines import plot_grid
 from shabam.utils import get_height, fileformat
+from shabam.plot_coverage import plot_coverage
+from shabam.coverage import get_coverage
 
 def _plot(context, reads, start, end, axis_offset, height, ref_seq=None,
         by_strand=False):
@@ -118,6 +120,46 @@ def seqplot(seqfiles, chrom, start, end, fastafile, out=None, by_strand=False):
             insert_spacer(context, coords, start, end)
         
         depths.append(max(coords))
+    
+    context.save()
+    
+    if out_type == 'png':
+        surface.write_to_png(out)
+    elif out_type is None:
+        return surface.write_to_png()
+
+def covplot(seqfiles, chrom, start, end, fastafile, out=None):
+    '''
+    '''
+    if type(seqfiles) is not list:
+        seqfiles = [seqfiles]
+    
+    chrom = str(chrom)
+    with pysam.FastaFile(fastafile) as handle:
+        reference = handle.fetch(start=start, end=end, region=chrom)
+        ref = reference
+    
+    axis_offset = 75
+    cov_height = 200
+    height = len(seqfiles) * cov_height + (len(seqfiles) - 1 ) * 50 + axis_offset
+    
+    out_type, surface = fileformat(out, width=(end - start) * 10, height=height)
+    context = cairo.Context(surface)
+    
+    plot_axis(context, start, end, axis_offset - 10)
+    plot_grid(context, start, end, axis_offset, height)
+    
+    for seqfile in seqfiles:
+        seq = pysam.AlignmentFile(seqfile, 'rb')
+        coords = OrderedDict({0: -1e9})
+        reps = ( parse_read(x, coords, ref, start) for x in seq.fetch(chrom, start, end) )
+        
+        plot_coverage(context, get_coverage(reps), axis_offset, start, (end - start) * 10, cov_height)
+        axis_offset += cov_height
+        
+        if seqfiles.index(seqfile) < len(seqfiles) - 1:
+            insert_spacer(context, coords, start, end)
+            axis_offset += 50
     
     context.save()
     
